@@ -23,6 +23,11 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.activities.MessageDetailActivity
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -51,6 +56,9 @@ fun ChatMessageItem(
             putExtra("message_content", message.content)
             putExtra("message_timestamp", message.timestamp)
             putExtra("is_from_user", message.isFromUser)
+            // 传递图片数据
+            putStringArrayListExtra("image_urls", ArrayList(message.imageUrls))
+            putStringArrayListExtra("local_image_paths", ArrayList(message.localImagePaths))
         }
         context.startActivity(intent)
         // 添加转场动画
@@ -89,16 +97,54 @@ fun ChatMessageItem(
                     bottomEnd = if (message.isFromUser) 4.dp else 16.dp
                 )
             ) {
-                Text(
-                    text = message.content,
-                    modifier = Modifier.padding(12.dp),
-                    color = if (message.isFromUser) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    // 显示文本内容
+                    if (message.content.isNotBlank()) {
+                        Text(
+                            text = message.content,
+                            color = if (message.isFromUser) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    
+                    // 显示图片（如果有）
+                    if (message.imageUrls.isNotEmpty()) {
+                        if (message.content.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(message.imageUrls) { imageUrl ->
+                                // 优先使用本地路径，如果没有则使用网络URL
+                                val imageSource = if (message.localImagePaths.isNotEmpty()) {
+                                    "file://${message.localImagePaths.firstOrNull() ?: imageUrl}"
+                                } else {
+                                    imageUrl
+                                }
+                                
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(imageSource)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "生成的图片",
+                                    modifier = Modifier
+                                        .size(200.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                }
             }
             
             Text(
@@ -120,6 +166,9 @@ fun ChatMessageItem(
                 putExtra("message_content", message.content)
                 putExtra("message_timestamp", message.timestamp)
                 putExtra("is_from_user", message.isFromUser)
+                // 添加图片数据
+                putStringArrayListExtra("image_urls", ArrayList(message.imageUrls))
+                putStringArrayListExtra("local_image_paths", ArrayList(message.localImagePaths))
             }
             context.startActivity(intent)
             // 添加转场动画

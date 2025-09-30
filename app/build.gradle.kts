@@ -76,6 +76,9 @@ dependencies {
     // DashScope SDK
     implementation("com.alibaba:dashscope-sdk-java:2.20.6")
     
+    // Image loading library
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

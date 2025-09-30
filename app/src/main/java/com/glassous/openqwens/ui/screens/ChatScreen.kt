@@ -343,7 +343,9 @@ fun ChatScreen(
                     
                     // 输入框
                     ChatInputBar(
-                        onSendMessage = viewModel::sendMessageStream, // 使用流式发送方法
+                        onSendMessage = { message ->
+                            viewModel.sendMessageStream(message, selectedFunctions)
+                        },
                         onShowAttachmentOptions = { showAttachmentBottomSheet = true }, // 显示附件选项
                         isLoading = isLoading || isStreaming // 流式输出时也显示为加载状态
                     )

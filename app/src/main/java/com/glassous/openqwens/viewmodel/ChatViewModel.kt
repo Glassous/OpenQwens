@@ -7,8 +7,10 @@ import com.glassous.openqwens.api.DashScopeApi
 import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
-import com.glassous.openqwens.ui.theme.DashScopeConfigManager
+import com.glassous.openqwens.network.ImageGenerationService
+import com.glassous.openqwens.ui.components.SelectedFunction
 import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
+import com.glassous.openqwens.utils.ImageDownloadManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +20,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     
     private val configManager = GlobalDashScopeConfigManager.getInstance(application)
     private val chatApi = DashScopeApi(configManager)
+    private val imageDownloadManager = ImageDownloadManager(application)
+    private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
     private val repository = ChatRepository(application)
     
     private val _currentSession = MutableStateFlow<ChatSession?>(null)
@@ -57,7 +61,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         createNewChat()
     }
     
-    fun sendMessage(content: String) {
+    fun sendMessage(content: String, selectedFunctions: List<SelectedFunction> = emptyList()) {
         val currentSession = _currentSession.value ?: return
         
         // 立即设置加载状态为true，显示加载动画
@@ -71,11 +75,28 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _currentSession.value = updatedSession
         updateSessionInList(updatedSession)
         
+        // 检查是否选择了图片生成功能
+        val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        
         // 发送到API并获取回复（传递完整的消息历史）
         viewModelScope.launch {
             try {
-                // 传递完整的消息历史记录给API，实现多轮对话
-                val response = chatApi.sendMessage(updatedMessages)
+                val response = if (hasImageGeneration) {
+                    // 使用图片生成服务
+                    val imageResult = imageGenerationService.generateImageForChat(userMessage, content)
+                    if (imageResult.isSuccess) {
+                        imageResult.getOrThrow()
+                    } else {
+                        ChatMessage(
+                            content = "抱歉，图片生成失败，请稍后重试。",
+                            isFromUser = false
+                        )
+                    }
+                } else {
+                    // 使用普通聊天API
+                    chatApi.sendMessage(updatedMessages)
+                }
+                
                 // 只有在API响应成功后才添加AI回复消息
                 val finalMessages = updatedMessages + response
                 val finalSession = updatedSession.copy(messages = finalMessages)
@@ -104,8 +125,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 流式发送消息（支持实时输出）
      */
-    fun sendMessageStream(content: String) {
+    fun sendMessageStream(content: String, selectedFunctions: List<SelectedFunction> = emptyList()) {
         val currentSession = _currentSession.value ?: return
+        
+        // 检查是否选择了图片生成功能
+        val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        
+        if (hasImageGeneration) {
+            // 图片生成不支持流式输出，使用普通发送方法
+            sendMessage(content, selectedFunctions)
+            return
+        }
         
         // 设置流式输出状态
         _isStreaming.value = true
