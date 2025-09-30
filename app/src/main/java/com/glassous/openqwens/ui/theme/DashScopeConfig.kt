@@ -154,10 +154,25 @@ class DashScopeConfigManager(private val context: Context) {
 }
 
 /**
+ * 全局单例配置管理器
+ */
+object GlobalDashScopeConfigManager {
+    @Volatile
+    private var INSTANCE: DashScopeConfigManager? = null
+    
+    fun getInstance(context: Context): DashScopeConfigManager {
+        return INSTANCE ?: synchronized(this) {
+            INSTANCE ?: DashScopeConfigManager(context.applicationContext).also { INSTANCE = it }
+        }
+    }
+}
+
+/**
  * Composable函数用于记住DashScopeConfigManager实例
+ * 使用全局单例确保不同页面间状态同步
  */
 @Composable
 fun rememberDashScopeConfigManager(): DashScopeConfigManager {
     val context = LocalContext.current
-    return remember { DashScopeConfigManager(context) }
+    return remember { GlobalDashScopeConfigManager.getInstance(context) }
 }

@@ -8,6 +8,7 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
+import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val configManager = DashScopeConfigManager(application)
+    private val configManager = GlobalDashScopeConfigManager.getInstance(application)
     private val chatApi = DashScopeApi(configManager)
     private val repository = ChatRepository(application)
     

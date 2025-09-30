@@ -111,8 +111,10 @@ fun ChatScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        // 根据模型选择状态显示不同的标题
-                        val selectedModel = dashScopeConfigManager.getSelectedModel()
+                        // 根据模型选择状态显示不同的标题，使用状态监听实现实时更新
+                        val selectedModelId by remember { derivedStateOf { dashScopeConfigManager.selectedModelId } }
+                        val models by remember { derivedStateOf { dashScopeConfigManager.models } }
+                        val selectedModel = models.find { it.id == selectedModelId }
                         val titleText = when {
                             selectedModel != null -> selectedModel.name
                             else -> "OpenQwens"
