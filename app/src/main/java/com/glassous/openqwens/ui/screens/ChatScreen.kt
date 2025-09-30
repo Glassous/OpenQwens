@@ -32,6 +32,7 @@ import com.glassous.openqwens.ui.components.FunctionType
 import com.glassous.openqwens.ui.components.AttachmentCardList
 import com.glassous.openqwens.ui.components.AttachmentData
 import com.glassous.openqwens.ui.components.MixedCardList
+import com.glassous.openqwens.ui.components.FunctionExclusionManager
 import com.glassous.openqwens.utils.FileUtils
 import com.glassous.openqwens.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
@@ -416,7 +417,9 @@ fun ChatScreen(
     if (showAttachmentBottomSheet) {
         AttachmentBottomSheet(
             onDismiss = { showAttachmentBottomSheet = false },
-            onFunctionSelected = handleFunctionSelected
+            onFunctionSelected = handleFunctionSelected,
+            selectedFunctions = selectedFunctions,
+            selectedAttachments = selectedAttachments
         )
     }
 }

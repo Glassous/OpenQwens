@@ -27,6 +27,8 @@ enum class MenuType {
 fun AttachmentBottomSheet(
     onDismiss: () -> Unit,
     onFunctionSelected: (FunctionType) -> Unit = {},
+    selectedFunctions: List<SelectedFunction> = emptyList(),
+    selectedAttachments: List<AttachmentData> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var currentMenu by remember { mutableStateOf(MenuType.MAIN) }
@@ -88,14 +90,18 @@ fun AttachmentBottomSheet(
                     onAttachmentSelected = { functionType ->
                         onFunctionSelected(functionType)
                         onDismiss()
-                    }
+                    },
+                    selectedFunctions = selectedFunctions,
+                    selectedAttachments = selectedAttachments
                 )
                 MenuType.FUNCTION -> FunctionMenuContent(
                     onBackClick = { currentMenu = MenuType.MAIN },
                     onFunctionSelected = { functionType ->
                         onFunctionSelected(functionType)
                         onDismiss()
-                    }
+                    },
+                    selectedFunctions = selectedFunctions,
+                    selectedAttachments = selectedAttachments
                 )
             }
         }
@@ -147,7 +153,9 @@ fun MainMenuContent(
 @Composable
 fun AttachmentMenuContent(
     onBackClick: () -> Unit,
-    onAttachmentSelected: (FunctionType) -> Unit = {}
+    onAttachmentSelected: (FunctionType) -> Unit = {},
+    selectedFunctions: List<SelectedFunction> = emptyList(),
+    selectedAttachments: List<AttachmentData> = emptyList()
 ) {
     Column(
         modifier = Modifier
@@ -184,35 +192,50 @@ fun AttachmentMenuContent(
                 icon = Icons.Default.CameraAlt,
                 title = "相机",
                 description = "拍照或录像",
-                onClick = { onAttachmentSelected(FunctionType.CAMERA) }
+                onClick = { onAttachmentSelected(FunctionType.CAMERA) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.CAMERA, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.Image,
                 title = "图片",
                 description = "从相册选择",
-                onClick = { onAttachmentSelected(FunctionType.IMAGE) }
+                onClick = { onAttachmentSelected(FunctionType.IMAGE) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.IMAGE, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.VideoLibrary,
                 title = "视频",
                 description = "选择视频文件",
-                onClick = { onAttachmentSelected(FunctionType.VIDEO) }
+                onClick = { onAttachmentSelected(FunctionType.VIDEO) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.VIDEO, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.AudioFile,
                 title = "音频",
                 description = "选择音频文件",
-                onClick = { onAttachmentSelected(FunctionType.AUDIO) }
+                onClick = { onAttachmentSelected(FunctionType.AUDIO) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.AUDIO, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.InsertDriveFile,
                 title = "文件",
                 description = "选择任意文件",
-                onClick = { onAttachmentSelected(FunctionType.FILE) }
+                onClick = { onAttachmentSelected(FunctionType.FILE) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.FILE, selectedFunctions, selectedAttachments
+                )
             )
         }
         
@@ -224,7 +247,9 @@ fun AttachmentMenuContent(
 @Composable
 fun FunctionMenuContent(
     onBackClick: () -> Unit,
-    onFunctionSelected: (FunctionType) -> Unit = {}
+    onFunctionSelected: (FunctionType) -> Unit = {},
+    selectedFunctions: List<SelectedFunction> = emptyList(),
+    selectedAttachments: List<AttachmentData> = emptyList()
 ) {
     Column(
         modifier = Modifier
@@ -261,35 +286,50 @@ fun FunctionMenuContent(
                 icon = Icons.Default.Psychology,
                 title = "深度思考",
                 description = "启用深度推理模式",
-                onClick = { onFunctionSelected(FunctionType.DEEP_THINKING) }
+                onClick = { onFunctionSelected(FunctionType.DEEP_THINKING) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.DEEP_THINKING, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.Search,
                 title = "联网搜索",
                 description = "搜索最新信息",
-                onClick = { onFunctionSelected(FunctionType.WEB_SEARCH) }
+                onClick = { onFunctionSelected(FunctionType.WEB_SEARCH) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.WEB_SEARCH, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.Palette,
                 title = "图片生成",
                 description = "AI生成图片",
-                onClick = { onFunctionSelected(FunctionType.IMAGE_GENERATION) }
+                onClick = { onFunctionSelected(FunctionType.IMAGE_GENERATION) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.IMAGE_GENERATION, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.Edit,
                 title = "图片编辑",
                 description = "编辑和修改图片",
-                onClick = { onFunctionSelected(FunctionType.IMAGE_EDITING) }
+                onClick = { onFunctionSelected(FunctionType.IMAGE_EDITING) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.IMAGE_EDITING, selectedFunctions, selectedAttachments
+                )
             )
             
             AttachmentOptionRow(
                 icon = Icons.Default.Movie,
                 title = "视频生成",
                 description = "AI生成视频",
-                onClick = { onFunctionSelected(FunctionType.VIDEO_GENERATION) }
+                onClick = { onFunctionSelected(FunctionType.VIDEO_GENERATION) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.VIDEO_GENERATION, selectedFunctions, selectedAttachments
+                )
             )
         }
         
@@ -363,13 +403,17 @@ fun AttachmentOptionRow(
     title: String,
     description: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Card(
-        onClick = onClick,
+        onClick = if (enabled) onClick else { {} },
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (enabled) 
+                MaterialTheme.colorScheme.surfaceVariant 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -383,7 +427,10 @@ fun AttachmentOptionRow(
                 imageVector = icon,
                 contentDescription = title,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = if (enabled) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
             
             Spacer(modifier = Modifier.width(16.dp))
@@ -394,13 +441,20 @@ fun AttachmentOptionRow(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = if (enabled) 
+                        MaterialTheme.colorScheme.onSurface 
+                    else 
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
                 
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (enabled) 
+                        MaterialTheme.colorScheme.onSurfaceVariant 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                 )
             }
         }
