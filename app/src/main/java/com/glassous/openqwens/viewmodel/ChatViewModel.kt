@@ -64,10 +64,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _currentSession.value = updatedSession
         updateSessionInList(updatedSession)
         
-        // 发送到API并获取回复
+        // 发送到API并获取回复（传递完整的消息历史）
         viewModelScope.launch {
             try {
-                val response = chatApi.sendMessage(content)
+                // 传递完整的消息历史记录给API，实现多轮对话
+                val response = chatApi.sendMessage(updatedMessages)
                 // 只有在API响应成功后才添加AI回复消息
                 val finalMessages = updatedMessages + response
                 val finalSession = updatedSession.copy(messages = finalMessages)

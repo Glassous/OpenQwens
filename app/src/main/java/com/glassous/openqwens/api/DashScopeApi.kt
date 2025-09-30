@@ -12,13 +12,50 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Arrays
+import java.util.ArrayList
 
 class DashScopeApi(private val configManager: DashScopeConfigManager) {
     
     private val generation = Generation()
     
-    suspend fun sendMessage(userMessage: String): ChatMessage = withContext(Dispatchers.IO) {
+    /**
+     * 将ChatMessage转换为DashScope的Message格式
+     */
+    private fun convertToMessage(chatMessage: ChatMessage): Message {
+        val role = if (chatMessage.isFromUser) Role.USER else Role.ASSISTANT
+        return Message.builder()
+            .role(role.getValue())
+            .content(chatMessage.content)
+            .build()
+    }
+    
+    /**
+     * 构建包含系统消息和历史对话的消息列表
+     */
+    private fun buildMessages(messageHistory: List<ChatMessage>): List<Message> {
+        val messages = ArrayList<Message>()
+        
+        // 添加系统消息
+        val systemMsg = Message.builder()
+            .role(Role.SYSTEM.getValue())
+            .content("You are a helpful assistant.")
+            .build()
+        messages.add(systemMsg)
+        
+        // 添加历史对话消息
+        for (chatMessage in messageHistory) {
+            messages.add(convertToMessage(chatMessage))
+        }
+        
+        return messages
+    }
+    
+    /**
+     * 发送消息（支持多轮对话）
+     * @param messageHistory 完整的对话历史记录
+     * @return AI回复的消息
+     */
+    suspend fun sendMessage(messageHistory: List<ChatMessage>): ChatMessage = withContext(Dispatchers.IO) {
         try {
             val apiKey = configManager.apiKey
             if (apiKey.isEmpty()) {
@@ -30,23 +67,14 @@ class DashScopeApi(private val configManager: DashScopeConfigManager) {
                 throw IllegalStateException("未选择模型，请在设置中选择一个模型")
             }
             
-            // 构建系统消息
-            val systemMsg = Message.builder()
-                .role(Role.SYSTEM.getValue())
-                .content("You are a helpful assistant.")
-                .build()
-            
-            // 构建用户消息
-            val userMsg = Message.builder()
-                .role(Role.USER.getValue())
-                .content(userMessage)
-                .build()
+            // 构建包含历史对话的消息列表
+            val messages = buildMessages(messageHistory)
             
             // 构建请求参数
             val param = GenerationParam.builder()
                 .apiKey(apiKey)
                 .model(selectedModel.id)
-                .messages(Arrays.asList(systemMsg, userMsg))
+                .messages(messages)
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .build()
             
