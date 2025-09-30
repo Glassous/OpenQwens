@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.glassous.openqwens.data.ChatSession
@@ -27,6 +28,9 @@ import com.glassous.openqwens.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 import android.content.Intent
 import com.glassous.openqwens.SettingsActivity
+import com.glassous.openqwens.ui.theme.DashScopeConfigManager
+import com.glassous.openqwens.ui.theme.rememberDashScopeConfigManager
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +40,22 @@ fun ChatScreen(
     val context = LocalContext.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    // 获取DashScopeConfigManager实例
+    val dashScopeConfigManager = rememberDashScopeConfigManager()
+    
+    // 获取时间段问候语
+    val greetingInfo = remember {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> Pair("上午好", "新的一天开始了，让我们一起探索知识的海洋")
+            in 12..13 -> Pair("中午好", "午间时光，有什么问题想要了解的吗？")
+            in 14..17 -> Pair("下午好", "下午时光正好，让我来帮助您解决问题")
+            in 18..22 -> Pair("晚上好", "夜幕降临，我在这里为您答疑解惑")
+            else -> Pair("夜深了", "深夜时分，我依然在这里陪伴您")
+        }
+    }
     
     val currentSession by viewModel.currentSession.collectAsState()
     val chatSessions by viewModel.chatSessions.collectAsState()
@@ -87,8 +107,14 @@ fun ChatScreen(
             topBar = {
                 TopAppBar(
                     title = {
+                        // 根据模型选择状态显示不同的标题
+                        val selectedModel = dashScopeConfigManager.getSelectedModel()
+                        val titleText = when {
+                            selectedModel != null -> selectedModel.name
+                            else -> "OpenQwen"
+                        }
                         Text(
-                            text = currentSession?.title ?: "OpenQwens",
+                            text = titleText,
                             fontWeight = FontWeight.Medium
                         )
                     },
@@ -147,7 +173,7 @@ fun ChatScreen(
                     .padding(paddingValues)
             ) {
                 if (currentSession?.messages?.isEmpty() == true) {
-                    // 空状态
+                    // 空状态 - 显示时间段问候语
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -156,21 +182,17 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "👋",
-                            style = MaterialTheme.typography.displayLarge
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "欢迎使用 OpenQwens",
+                            text = greetingInfo.first,
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "开始对话吧！",
+                            text = greetingInfo.second,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 } else {

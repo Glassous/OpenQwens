@@ -15,7 +15,7 @@ enum class ThemeMode(val value: Int) {
     DARK(2)
 }
 
-class ThemeManager(private val context: Context) {
+class ThemeManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("theme_prefs", Context.MODE_PRIVATE)
     
     var currentThemeMode by mutableIntStateOf(getThemeMode())
@@ -24,6 +24,12 @@ class ThemeManager(private val context: Context) {
     fun setThemeMode(mode: ThemeMode) {
         currentThemeMode = mode.value
         prefs.edit().putInt("theme_mode", mode.value).apply()
+        // 通知所有实例更新状态
+        _instance?.let { instance ->
+            if (instance != this) {
+                instance.currentThemeMode = mode.value
+            }
+        }
     }
     
     fun getThemeMode(): Int {
@@ -37,10 +43,23 @@ class ThemeManager(private val context: Context) {
             else -> ThemeMode.SYSTEM
         }
     }
+    
+    companion object {
+        @Volatile
+        private var _instance: ThemeManager? = null
+        
+        fun getInstance(context: Context): ThemeManager {
+            return _instance ?: synchronized(this) {
+                _instance ?: ThemeManager(context.applicationContext).also { 
+                    _instance = it 
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun rememberThemeManager(): ThemeManager {
     val context = LocalContext.current
-    return remember { ThemeManager(context) }
+    return remember { ThemeManager.getInstance(context) }
 }
