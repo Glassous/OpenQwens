@@ -11,8 +11,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.openqwens.ui.theme.OpenQwensTheme
@@ -24,14 +28,14 @@ class MessageDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         val messageContent = intent.getStringExtra("message_content") ?: ""
         val messageTimestamp = intent.getLongExtra("message_timestamp", 0L)
         val isFromUser = intent.getBooleanExtra("message_is_from_user", false)
-        
+
         setContent {
             val themeManager = rememberThemeManager()
-            
+
             OpenQwensTheme(
                 themeMode = themeManager.getThemeModeEnum()
             ) {
@@ -43,7 +47,7 @@ class MessageDetailActivity : ComponentActivity() {
                         messageContent = messageContent,
                         messageTimestamp = messageTimestamp,
                         isFromUser = isFromUser,
-                        onBackClick = { 
+                        onBackClick = {
                             finish()
                             // 添加返回动画
                             overridePendingTransition(
@@ -67,9 +71,13 @@ fun MessageDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 1. 创建一个状态变量来保存可编辑的文本内容
+    //    初始值为传入的 messageContent
+    var editableMessageContent by remember { mutableStateOf(messageContent) }
+
     val timeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm", Locale.getDefault())
     val scrollState = rememberScrollState()
-    
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -100,15 +108,29 @@ fun MessageDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp) // 只保留水平 padding，让输入框上下贴边
                 .verticalScroll(scrollState)
         ) {
-            // 消息内容
-            Text(
-                text = messageContent,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
+            // 2. 将 Text 组件替换为 TextField 组件
+            TextField(
+                value = editableMessageContent, // 绑定状态变量
+                onValueChange = { newValue ->
+                    editableMessageContent = newValue // 当文本改变时，更新状态变量
+                },
+                modifier = Modifier.fillMaxSize(), // 让输入框填满整个 Column
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    // 应用和之前 Text 组件一致的样式
+                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
+                ),
+                // 3. 自定义颜色，让它看起来像一个可编辑的文档页面
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent, // 移除焦点状态的下划线
+                    unfocusedIndicatorColor = Color.Transparent, // 移除非焦点状态的下划线
+                    cursorColor = MaterialTheme.colorScheme.primary // 可以自定义光标颜色
+                )
             )
         }
     }
