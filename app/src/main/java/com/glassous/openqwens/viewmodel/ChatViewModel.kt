@@ -29,6 +29,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
+    // 流式输出相关状态
+    private val _isStreaming = MutableStateFlow(false)
+    val isStreaming: StateFlow<Boolean> = _isStreaming.asStateFlow()
+    
+    private val _streamingContent = MutableStateFlow("")
+    val streamingContent: StateFlow<String> = _streamingContent.asStateFlow()
+    
     init {
         // 加载保存的聊天记录
         loadSavedSessions()
@@ -91,6 +98,83 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+    
+    /**
+     * 流式发送消息（支持实时输出）
+     */
+    fun sendMessageStream(content: String) {
+        val currentSession = _currentSession.value ?: return
+        
+        // 设置流式输出状态
+        _isStreaming.value = true
+        _streamingContent.value = ""
+        
+        // 添加用户消息
+        val userMessage = ChatMessage(content = content, isFromUser = true)
+        val updatedMessages = currentSession.messages + userMessage
+        val updatedSession = currentSession.copy(messages = updatedMessages)
+        
+        _currentSession.value = updatedSession
+        updateSessionInList(updatedSession)
+        
+        // 创建一个临时的AI消息用于显示流式内容
+        val tempAiMessage = ChatMessage(content = "", isFromUser = false)
+        val messagesWithTemp = updatedMessages + tempAiMessage
+        val sessionWithTemp = updatedSession.copy(messages = messagesWithTemp)
+        _currentSession.value = sessionWithTemp
+        
+        // 发送流式请求
+        viewModelScope.launch {
+            chatApi.sendMessageStream(
+                messageHistory = updatedMessages,
+                onStreamContent = { contentChunk ->
+                    // 更新流式内容
+                    _streamingContent.value += contentChunk
+                    
+                    // 更新临时消息的内容
+                    val currentMessages = _currentSession.value?.messages?.toMutableList() ?: return@sendMessageStream
+                    if (currentMessages.isNotEmpty()) {
+                        val lastIndex = currentMessages.size - 1
+                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = _streamingContent.value)
+                        val updatedSessionWithStream = _currentSession.value?.copy(messages = currentMessages)
+                        _currentSession.value = updatedSessionWithStream
+                    }
+                },
+                onComplete = { fullContent ->
+                    // 流式输出完成，创建最终的AI消息
+                    val finalAiMessage = ChatMessage(content = fullContent, isFromUser = false)
+                    val finalMessages = updatedMessages + finalAiMessage
+                    val finalSession = updatedSession.copy(messages = finalMessages)
+                    
+                    _currentSession.value = finalSession
+                    updateSessionInList(finalSession)
+                    
+                    // 保存到本地存储
+                    saveSessions()
+                    
+                    // 重置流式状态
+                    _isStreaming.value = false
+                    _streamingContent.value = ""
+                },
+                onError = { errorMessage ->
+                    // 处理错误
+                    val errorMsg = ChatMessage(
+                        content = "抱歉，发生了错误：$errorMessage",
+                        isFromUser = false
+                    )
+                    val errorMessages = updatedMessages + errorMsg
+                    val errorSession = updatedSession.copy(messages = errorMessages)
+                    
+                    _currentSession.value = errorSession
+                    updateSessionInList(errorSession)
+                    
+                    // 重置流式状态
+                    _isStreaming.value = false
+                    _streamingContent.value = ""
+                }
+            )
         }
     }
     

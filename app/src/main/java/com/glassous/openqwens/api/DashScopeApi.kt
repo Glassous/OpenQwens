@@ -12,6 +12,11 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import io.reactivex.Flowable
+import io.reactivex.schedulers.Schedulers
 import java.util.ArrayList
 
 class DashScopeApi(private val configManager: DashScopeConfigManager) {
@@ -121,6 +126,98 @@ class DashScopeApi(private val configManager: DashScopeConfigManager) {
                 content = "发生未知错误：${e.message}",
                 isFromUser = false
             )
+        }
+    }
+    
+    /**
+     * 流式发送消息（支持多轮对话和实时输出）
+     * @param messageHistory 完整的对话历史记录
+     * @param onStreamContent 流式内容回调
+     * @param onComplete 完成回调
+     * @param onError 错误回调
+     */
+    suspend fun sendMessageStream(
+        messageHistory: List<ChatMessage>,
+        onStreamContent: (String) -> Unit,
+        onComplete: (String) -> Unit,
+        onError: (String) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        try {
+            val apiKey = configManager.apiKey
+            if (apiKey.isEmpty()) {
+                onError("API密钥未配置，请在设置中配置API密钥")
+                return@withContext
+            }
+            
+            val selectedModel = configManager.getSelectedModel()
+            if (selectedModel == null) {
+                onError("未选择模型，请在设置中选择一个模型")
+                return@withContext
+            }
+            
+            // 构建包含历史对话的消息列表
+            val messages = buildMessages(messageHistory)
+            
+            // 构建请求参数（开启流式输出）
+            val param = GenerationParam.builder()
+                .apiKey(apiKey)
+                .model(selectedModel.id)
+                .messages(messages)
+                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+                .incrementalOutput(true) // 开启增量输出，流式返回
+                .build()
+            
+            // 发起流式调用
+            val result: Flowable<GenerationResult> = generation.streamCall(param)
+            val fullContent = StringBuilder()
+            
+            result
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.computation())
+                .subscribe(
+                    // onNext: 处理每个响应片段
+                    { message ->
+                        try {
+                            val choices = message.output?.choices
+                            if (choices != null && choices.isNotEmpty()) {
+                                val content = choices[0].message?.content ?: ""
+                                val finishReason = choices[0].finishReason
+                                
+                                // 累积完整内容
+                                fullContent.append(content)
+                                
+                                // 实时输出内容片段
+                                onStreamContent(content)
+                                
+                                // 检查是否完成
+                                if (finishReason != null && finishReason != "null") {
+                                    onComplete(fullContent.toString())
+                                }
+                            }
+                        } catch (e: Exception) {
+                            onError("解析响应失败：${e.message}")
+                        }
+                    },
+                    // onError: 处理错误
+                    { error ->
+                        when (error) {
+                            is NoApiKeyException -> onError("API密钥错误或未配置，请检查设置中的API密钥配置")
+                            is ApiException -> onError("API调用失败：${error.message}")
+                            is InputRequiredException -> onError("请求参数不完整：${error.message}")
+                            else -> onError("发生未知错误：${error.message}")
+                        }
+                    },
+                    // onComplete: 完成回调（备用）
+                    {
+                        // 如果没有通过finishReason触发完成，这里作为备用
+                        if (fullContent.isNotEmpty()) {
+                            onComplete(fullContent.toString())
+                        }
+                    }
+                )
+                
+        } catch (e: Exception) {
+            onError("请求异常：${e.message}")
         }
     }
 }

@@ -64,6 +64,8 @@ fun ChatScreen(
     val currentSession by viewModel.currentSession.collectAsState()
     val chatSessions by viewModel.chatSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isStreaming by viewModel.isStreaming.collectAsState()
+    val streamingContent by viewModel.streamingContent.collectAsState()
     
     val listState = rememberLazyListState()
     
@@ -168,8 +170,8 @@ fun ChatScreen(
             },
             bottomBar = {
                 ChatInputBar(
-                    onSendMessage = viewModel::sendMessage,
-                    isLoading = isLoading
+                    onSendMessage = viewModel::sendMessageStream, // 使用流式发送方法
+                    isLoading = isLoading || isStreaming // 流式输出时也显示为加载状态
                 )
             },
             snackbarHost = {
@@ -343,24 +345,34 @@ fun LoadingIndicatorItem() {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.Start
     ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(
-                        topStart = 4.dp,
-                        topEnd = 16.dp,
-                        bottomStart = 16.dp,
-                        bottomEnd = 16.dp
-                    )
-                )
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            LoadingIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primary
+        Card(
+            modifier = Modifier.widthIn(max = 280.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 4.dp,
+                bottomEnd = 16.dp
             )
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "正在思考...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
