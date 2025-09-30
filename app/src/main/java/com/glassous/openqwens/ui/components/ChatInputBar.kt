@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ChatInputBar(
     onSendMessage: (String) -> Unit,
+    onShowAttachmentOptions: () -> Unit = {},
     isLoading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -30,6 +32,25 @@ fun ChatInputBar(
                 .padding(16.dp),
             verticalAlignment = Alignment.Bottom
         ) {
+            // 功能按钮
+            FloatingActionButton(
+                onClick = onShowAttachmentOptions,
+                modifier = Modifier.size(56.dp),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 12.dp
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "附件选项"
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },

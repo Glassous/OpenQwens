@@ -8,14 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +25,14 @@ import com.glassous.openqwens.ui.components.ChatMessageItem
 import com.glassous.openqwens.ui.components.ChatSessionItem
 import com.glassous.openqwens.ui.components.DeleteSessionDialog
 import com.glassous.openqwens.ui.components.RenameSessionDialog
+import com.glassous.openqwens.ui.components.AttachmentBottomSheet
+import com.glassous.openqwens.ui.components.FunctionCardList
+import com.glassous.openqwens.ui.components.SelectedFunction
+import com.glassous.openqwens.ui.components.FunctionType
+import com.glassous.openqwens.ui.components.AttachmentCardList
+import com.glassous.openqwens.ui.components.AttachmentData
+import com.glassous.openqwens.ui.components.MixedCardList
+import com.glassous.openqwens.utils.FileUtils
 import com.glassous.openqwens.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 import android.content.Intent
@@ -34,6 +40,16 @@ import com.glassous.openqwens.SettingsActivity
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import com.glassous.openqwens.ui.theme.rememberDashScopeConfigManager
 import java.util.Calendar
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import androidx.compose.runtime.remember
+import androidx.core.content.FileProvider
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import android.Manifest
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -53,7 +69,7 @@ fun ChatScreen(
         val calendar = Calendar.getInstance()
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
         when (hour) {
-            in 5..11 -> Pair("上午好", "新的一天开始了，让我们一起探索知识的海洋")
+            in 5..11 -> Pair("上午好", "新的一天开始了，我们一起探索知识的海洋")
             in 12..13 -> Pair("中午好", "午间时光，有什么问题想要了解的吗？")
             in 14..17 -> Pair("下午好", "下午时光正好，让我来帮助您解决问题")
             in 18..22 -> Pair("晚上好", "夜幕降临，我在这里为您答疑解惑")
@@ -68,6 +84,97 @@ fun ChatScreen(
     val streamingContent by viewModel.streamingContent.collectAsState()
     
     val listState = rememberLazyListState()
+    
+    // Bottom Sheet 状态
+    var showAttachmentBottomSheet by remember { mutableStateOf(false) }
+    
+    // 选中的功能列表状态
+    var selectedFunctions by remember { mutableStateOf(listOf<SelectedFunction>()) }
+    
+    // 选中的附件列表状态
+    var selectedAttachments by remember { mutableStateOf(listOf<AttachmentData>()) }
+    
+    // 文件选择器
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val attachment = FileUtils.createAttachmentFromUri(context, it)
+            attachment?.let { attachmentData ->
+                // 检查文件大小
+                if (FileUtils.isFileSizeValid(attachmentData.fileSize)) {
+                    // 检查是否已经选择了该文件，避免重复添加
+                    if (!selectedAttachments.any { it.fileName == attachmentData.fileName }) {
+                        selectedAttachments = selectedAttachments + attachmentData
+                    }
+                } else {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("文件大小超过限制（最大10MB）")
+                    }
+                }
+            } ?: run {
+                scope.launch {
+                    snackbarHostState.showSnackbar("文件读取失败")
+                }
+            }
+        }
+    }
+    
+    // 创建临时图片文件
+    val cameraImageUri = remember {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val imageFile = File(context.cacheDir, "camera_image_$timeStamp.jpg")
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            imageFile
+        )
+    }
+    
+    // 相机启动器
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            // 拍照成功，处理图片
+            val attachment = FileUtils.createAttachmentFromUri(context, cameraImageUri)
+            attachment?.let { attachmentData ->
+                // 检查文件大小
+                if (FileUtils.isFileSizeValid(attachmentData.fileSize)) {
+                    selectedAttachments = selectedAttachments + attachmentData
+                    scope.launch {
+                        snackbarHostState.showSnackbar("照片已添加")
+                    }
+                } else {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("照片文件过大")
+                    }
+                }
+            } ?: run {
+                scope.launch {
+                    snackbarHostState.showSnackbar("照片处理失败")
+                }
+            }
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("拍照已取消")
+            }
+        }
+    }
+    
+    // 相机权限请求
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // 权限已授予，启动相机
+            cameraLauncher.launch(cameraImageUri)
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("需要相机权限才能拍照")
+            }
+        }
+    }
     
     // 处理返回键：如果侧边栏打开，则关闭侧边栏而不是退出应用
     BackHandler(enabled = drawerState.isOpen) {
@@ -85,6 +192,54 @@ fun ChatScreen(
         }
     }
     
+    // 处理功能选择
+    val handleFunctionSelected: (FunctionType) -> Unit = { functionType ->
+        // 如果是附件类型，启动文件选择器
+        if (functionType in listOf(FunctionType.IMAGE, FunctionType.VIDEO, FunctionType.AUDIO, FunctionType.FILE)) {
+            when (functionType) {
+                FunctionType.IMAGE -> filePickerLauncher.launch("image/*")
+                FunctionType.VIDEO -> filePickerLauncher.launch("video/*")
+                FunctionType.AUDIO -> filePickerLauncher.launch("audio/*")
+                FunctionType.FILE -> filePickerLauncher.launch("*/*")
+                else -> {}
+            }
+        } else if (functionType == FunctionType.CAMERA) {
+            // 相机功能，请求权限并启动相机
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        } else {
+            // 功能类型，添加到功能列表
+            val newFunction = SelectedFunction(
+                id = functionType.id,
+                name = functionType.displayName,
+                description = functionType.description,
+                icon = when (functionType) {
+                    FunctionType.DEEP_THINKING -> Icons.Default.Psychology
+                    FunctionType.WEB_SEARCH -> Icons.Default.Search
+                    FunctionType.IMAGE_GENERATION -> Icons.Default.Palette
+                    FunctionType.IMAGE_EDITING -> Icons.Default.Edit
+                    FunctionType.VIDEO_GENERATION -> Icons.Default.Movie
+                    FunctionType.CAMERA -> Icons.Default.CameraAlt
+                    else -> Icons.Default.Functions
+                }
+            )
+            
+            // 检查是否已经选择了该功能，避免重复添加
+            if (!selectedFunctions.any { it.id == newFunction.id }) {
+                selectedFunctions = selectedFunctions + newFunction
+            }
+        }
+    }
+    
+    // 处理功能移除
+    val handleFunctionRemoved: (SelectedFunction) -> Unit = { function ->
+        selectedFunctions = selectedFunctions.filter { it.id != function.id }
+    }
+    
+    // 处理附件移除
+    val handleAttachmentRemoved: (AttachmentData) -> Unit = { attachment ->
+        selectedAttachments = selectedAttachments.filter { it.id != attachment.id }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -169,10 +324,29 @@ fun ChatScreen(
                 )
             },
             bottomBar = {
-                ChatInputBar(
-                    onSendMessage = viewModel::sendMessageStream, // 使用流式发送方法
-                    isLoading = isLoading || isStreaming // 流式输出时也显示为加载状态
-                )
+                Column(
+                    modifier = Modifier
+                        .background(Color.Transparent) // 使用Color.Transparent替代androidx.compose.ui.graphics.Color.Transparent
+                        .fillMaxWidth()
+                ) {
+                    // 混合卡片列表（附件和功能卡片在同一行）
+                    MixedCardList(
+                        selectedAttachments = selectedAttachments,
+                        selectedFunctions = selectedFunctions,
+                        onRemoveAttachment = handleAttachmentRemoved,
+                        onRemoveFunction = handleFunctionRemoved,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .background(Color.Transparent) // 强制透明背景
+                    )
+                    
+                    // 输入框
+                    ChatInputBar(
+                        onSendMessage = viewModel::sendMessageStream, // 使用流式发送方法
+                        onShowAttachmentOptions = { showAttachmentBottomSheet = true }, // 显示附件选项
+                        isLoading = isLoading || isStreaming // 流式输出时也显示为加载状态
+                    )
+                }
             },
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)
@@ -236,6 +410,14 @@ fun ChatScreen(
                 }
             }
         }
+    }
+    
+    // 显示附件选项 Bottom Sheet
+    if (showAttachmentBottomSheet) {
+        AttachmentBottomSheet(
+            onDismiss = { showAttachmentBottomSheet = false },
+            onFunctionSelected = handleFunctionSelected
+        )
     }
 }
 
