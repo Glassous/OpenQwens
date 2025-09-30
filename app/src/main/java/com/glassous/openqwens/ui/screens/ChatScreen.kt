@@ -112,7 +112,7 @@ fun ChatScreen(
                         val selectedModel = dashScopeConfigManager.getSelectedModel()
                         val titleText = when {
                             selectedModel != null -> selectedModel.name
-                            else -> "OpenQwen"
+                            else -> "OpenQwens"
                         }
                         Text(
                             text = titleText,
