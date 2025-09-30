@@ -51,8 +51,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.Manifest
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.glassous.openqwens.utils.ImageUtils
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel()
@@ -428,6 +436,7 @@ fun ChatScreen(
 
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationDrawerContent(
     chatSessions: List<ChatSession>,
@@ -439,6 +448,10 @@ fun NavigationDrawerContent(
 ) {
     var showDeleteDialog by remember { mutableStateOf<ChatSession?>(null) }
     var showRenameDialog by remember { mutableStateOf<ChatSession?>(null) }
+    val context = LocalContext.current
+    
+    // 获取所有生成的图片
+    val generatedImages = remember { ImageUtils.getAIGeneratedImages(context) }
     
     ModalDrawerSheet {
         Column(
@@ -458,6 +471,55 @@ fun NavigationDrawerContent(
             HorizontalDivider()
             
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // MD3 Carousel 组件 - 显示生成的图片
+            if (generatedImages.isNotEmpty()) {
+                Text(
+                    text = "生成的图片",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                val carouselState = rememberCarouselState { generatedImages.size }
+                
+                HorizontalMultiBrowseCarousel(
+                    state = carouselState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .padding(bottom = 16.dp),
+                    preferredItemWidth = 100.dp,
+                    itemSpacing = 8.dp
+                ) { index ->
+                    val imagePath = generatedImages[index]
+                    
+                    Card(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable {
+                                // 点击图片时可以添加预览功能
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(imagePath)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "生成的图片 ${index + 1}",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             
             // 新建聊天按钮
             NavigationDrawerItem(
