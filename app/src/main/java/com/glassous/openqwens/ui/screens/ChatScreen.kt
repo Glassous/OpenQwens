@@ -40,6 +40,7 @@ fun ChatScreen(
     val context = LocalContext.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     // 获取DashScopeConfigManager实例
     val dashScopeConfigManager = rememberDashScopeConfigManager()
@@ -165,6 +166,9 @@ fun ChatScreen(
                     onSendMessage = viewModel::sendMessage,
                     isLoading = isLoading
                 )
+            },
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
             }
         ) { paddingValues ->
             Box(
@@ -204,7 +208,14 @@ fun ChatScreen(
                     ) {
                         currentSession?.messages?.let { messages ->
                             items(messages) { message ->
-                                ChatMessageItem(message = message)
+                                ChatMessageItem(
+                                    message = message,
+                                    onShowSnackbar = { text ->
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(text)
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
