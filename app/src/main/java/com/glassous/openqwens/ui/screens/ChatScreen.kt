@@ -1,13 +1,16 @@
 package com.glassous.openqwens.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,7 +35,7 @@ import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import com.glassous.openqwens.ui.theme.rememberDashScopeConfigManager
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel()
@@ -218,12 +221,21 @@ fun ChatScreen(
                                 )
                             }
                         }
+                        
+                        // 显示加载动画（当正在等待API响应时）
+                        if (isLoading) {
+                            item {
+                                LoadingIndicatorItem()
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun NavigationDrawerContent(
@@ -317,5 +329,36 @@ fun NavigationDrawerContent(
             onConfirm = { newTitle -> onRenameSession(session.id, newTitle) },
             onDismiss = { showRenameDialog = null }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun LoadingIndicatorItem() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 16.dp
+                    )
+                )
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LoadingIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }

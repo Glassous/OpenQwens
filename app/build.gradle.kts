@@ -54,6 +54,10 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    // Override Material3 to alpha version for LoadingIndicator support
+    implementation("androidx.compose.material3:material3:1.5.0-alpha04")
+    // Add Material Icons Extended for additional icons
+    implementation("androidx.compose.material:material-icons-extended:1.7.6")
     implementation(libs.androidx.compose.activity)
     
     // Lifecycle
@@ -68,6 +72,9 @@ dependencies {
     
     // Data storage
     implementation("com.google.code.gson:gson:2.10.1")
+    
+    // DashScope SDK
+    implementation("com.alibaba:dashscope-sdk-java:2.20.6")
     
     // Testing
     testImplementation(libs.junit)

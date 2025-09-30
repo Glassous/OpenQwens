@@ -3,10 +3,11 @@ package com.glassous.openqwens.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.glassous.openqwens.api.MockChatApi
+import com.glassous.openqwens.api.DashScopeApi
 import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
+import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val chatApi = MockChatApi()
+    private val configManager = DashScopeConfigManager(application)
+    private val chatApi = DashScopeApi(configManager)
     private val repository = ChatRepository(application)
     
     private val _currentSession = MutableStateFlow<ChatSession?>(null)
@@ -50,6 +52,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessage(content: String) {
         val currentSession = _currentSession.value ?: return
         
+        // 立即设置加载状态为true，显示加载动画
+        _isLoading.value = true
+        
         // 添加用户消息
         val userMessage = ChatMessage(content = content, isFromUser = true)
         val updatedMessages = currentSession.messages + userMessage
@@ -59,10 +64,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         updateSessionInList(updatedSession)
         
         // 发送到API并获取回复
-        _isLoading.value = true
         viewModelScope.launch {
             try {
                 val response = chatApi.sendMessage(content)
+                // 只有在API响应成功后才添加AI回复消息
                 val finalMessages = updatedMessages + response
                 val finalSession = updatedSession.copy(messages = finalMessages)
                 
@@ -71,7 +76,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // 保存到本地存储
                 saveSessions()
             } catch (e: Exception) {
-                // 处理错误
+                // 处理错误 - 只有在出错时才添加错误消息
                 val errorMessage = ChatMessage(
                     content = "抱歉，发生了错误，请稍后重试。",
                     isFromUser = false

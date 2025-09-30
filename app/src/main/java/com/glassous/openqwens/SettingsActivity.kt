@@ -552,7 +552,7 @@ private fun AddModelDialog(
                     if (modelName.isNotBlank()) {
                         onConfirm(
                             DashScopeModel(
-                                id = UUID.randomUUID().toString(),
+                                id = modelName.trim(),
                                 name = modelName.trim(),
                                 description = modelDescription.trim()
                             )
