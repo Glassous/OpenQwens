@@ -208,35 +208,7 @@ fun AttachmentMenuContent(
                 )
             )
             
-            AttachmentOptionRow(
-                icon = Icons.Default.VideoLibrary,
-                title = "视频",
-                description = "选择视频文件",
-                onClick = { onAttachmentSelected(FunctionType.VIDEO) },
-                enabled = !FunctionExclusionManager.shouldBeDisabled(
-                    FunctionType.VIDEO, selectedFunctions, selectedAttachments
-                )
-            )
-            
-            AttachmentOptionRow(
-                icon = Icons.Default.AudioFile,
-                title = "音频",
-                description = "选择音频文件",
-                onClick = { onAttachmentSelected(FunctionType.AUDIO) },
-                enabled = !FunctionExclusionManager.shouldBeDisabled(
-                    FunctionType.AUDIO, selectedFunctions, selectedAttachments
-                )
-            )
-            
-            AttachmentOptionRow(
-                icon = Icons.Default.InsertDriveFile,
-                title = "文件",
-                description = "选择任意文件",
-                onClick = { onAttachmentSelected(FunctionType.FILE) },
-                enabled = !FunctionExclusionManager.shouldBeDisabled(
-                    FunctionType.FILE, selectedFunctions, selectedAttachments
-                )
-            )
+
         }
         
         // 底部间距
@@ -322,15 +294,9 @@ fun FunctionMenuContent(
                 )
             )
             
-            AttachmentOptionRow(
-                icon = Icons.Default.Movie,
-                title = "视频生成",
-                description = "AI生成视频",
-                onClick = { onFunctionSelected(FunctionType.VIDEO_GENERATION) },
-                enabled = !FunctionExclusionManager.shouldBeDisabled(
-                    FunctionType.VIDEO_GENERATION, selectedFunctions, selectedAttachments
-                )
-            )
+
+            
+            // 视觉理解按钮已删除，因为上传图片时会自动触发视觉理解功能
         }
         
         // 底部间距

@@ -10,7 +10,9 @@ import com.glassous.openqwens.data.ChatSession
 import com.glassous.openqwens.network.ImageGenerationService
 import com.glassous.openqwens.network.DeepThinkingService
 import com.glassous.openqwens.network.WebSearchService
+import com.glassous.openqwens.network.VisionUnderstandingService
 import com.glassous.openqwens.ui.components.SelectedFunction
+import com.glassous.openqwens.ui.components.AttachmentData
 import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
 import com.glassous.openqwens.utils.ImageDownloadManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +28,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
     private val deepThinkingService = DeepThinkingService(configManager)
     private val webSearchService = WebSearchService(configManager)
+    private val visionUnderstandingService = VisionUnderstandingService(configManager)
     private val repository = ChatRepository(application)
     
     private val _currentSession = MutableStateFlow<ChatSession?>(null)
@@ -65,24 +68,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         createNewChat()
     }
     
-    fun sendMessage(content: String, selectedFunctions: List<SelectedFunction> = emptyList()) {
+    fun sendMessage(content: String, selectedFunctions: List<SelectedFunction> = emptyList(), selectedAttachments: List<AttachmentData> = emptyList()) {
         val currentSession = _currentSession.value ?: return
         
         // 立即设置加载状态为true，显示加载动画
         _isLoading.value = true
         
         // 添加用户消息
-        val userMessage = ChatMessage(content = content, isFromUser = true)
+        val userMessage = ChatMessage(content = content, isFromUser = true, attachments = selectedAttachments)
         val updatedMessages = currentSession.messages + userMessage
         val updatedSession = currentSession.copy(messages = updatedMessages)
         
         _currentSession.value = updatedSession
         updateSessionInList(updatedSession)
         
-        // 检查是否选择了图片生成功能、深度思考功能或联网搜索功能
+        // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
+        val hasVisionUnderstanding = selectedFunctions.any { it.id == "vision_understanding" } || 
+                                   visionUnderstandingService.shouldEnableVisionUnderstanding(selectedAttachments, selectedFunctions)
         
         // 发送到API并获取回复（传递完整的消息历史）
         viewModelScope.launch {
@@ -137,6 +142,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isFromUser = false
                         )
                     }
+                } else if (hasVisionUnderstanding) {
+                    // 使用视觉理解服务 - 非流式模式，直接调用流式方法并等待完成
+                    var visionResponse: ChatMessage? = null
+                    var isCompleted = false
+                    
+                    visionUnderstandingService.generateVisionUnderstandingStream(
+                        messageHistory = updatedMessages,
+                        attachments = selectedAttachments,
+                        onContent = { /* 忽略流式内容 */ },
+                        onComplete = { result ->
+                            visionResponse = ChatMessage(content = result.content, isFromUser = false)
+                            isCompleted = true
+                        },
+                        onError = { error ->
+                            visionResponse = ChatMessage(
+                                content = "抱歉，视觉理解失败：$error",
+                                isFromUser = false
+                            )
+                            isCompleted = true
+                        }
+                    )
+                    
+                    // 等待完成
+                    while (!isCompleted) {
+                        kotlinx.coroutines.delay(100)
+                    }
+                    
+                    visionResponse ?: ChatMessage(
+                        content = "抱歉，视觉理解失败，请稍后重试。",
+                        isFromUser = false
+                    )
                 } else {
                     // 使用普通聊天API
                     chatApi.sendMessage(updatedMessages)
@@ -170,17 +206,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 流式发送消息（支持实时输出）
      */
-    fun sendMessageStream(content: String, selectedFunctions: List<SelectedFunction> = emptyList()) {
+    fun sendMessageStream(content: String, selectedFunctions: List<SelectedFunction> = emptyList(), selectedAttachments: List<AttachmentData> = emptyList()) {
         val currentSession = _currentSession.value ?: return
         
-        // 检查是否选择了图片生成功能或深度思考功能
+        // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
+        val hasVisionUnderstanding = selectedFunctions.any { it.id == "vision_understanding" } || 
+                                   visionUnderstandingService.shouldEnableVisionUnderstanding(selectedAttachments, selectedFunctions)
         
         if (hasImageGeneration || hasDeepThinking) {
             // 图片生成和深度思考不支持流式输出，使用普通发送方法
-            sendMessage(content, selectedFunctions)
+            sendMessage(content, selectedFunctions, selectedAttachments)
             return
         }
         
@@ -189,7 +227,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _streamingContent.value = ""
         
         // 添加用户消息
-        val userMessage = ChatMessage(content = content, isFromUser = true)
+        val userMessage = ChatMessage(content = content, isFromUser = true, attachments = selectedAttachments)
         val updatedMessages = currentSession.messages + userMessage
         val updatedSession = currentSession.copy(messages = updatedMessages)
         
@@ -224,6 +262,57 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     onComplete = { finalMessage ->
                         // 流式输出完成，使用最终的AI消息
                         val finalMessages = updatedMessages + finalMessage
+                        val finalSession = updatedSession.copy(messages = finalMessages)
+                        
+                        _currentSession.value = finalSession
+                        updateSessionInList(finalSession)
+                        
+                        // 保存到本地存储
+                        saveSessions()
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
+                    },
+                    onError = { errorMessage ->
+                        // 处理错误
+                        val errorMsg = ChatMessage(
+                            content = "抱歉，发生了错误：$errorMessage",
+                            isFromUser = false
+                        )
+                        val errorMessages = updatedMessages + errorMsg
+                        val errorSession = updatedSession.copy(messages = errorMessages)
+                        
+                        _currentSession.value = errorSession
+                        updateSessionInList(errorSession)
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
+                    }
+                )
+            } else if (hasVisionUnderstanding) {
+                // 使用视觉理解的流式输出
+                visionUnderstandingService.generateVisionUnderstandingStream(
+                    messageHistory = updatedMessages,
+                    attachments = selectedAttachments,
+                    onContent = { contentChunk ->
+                        // 更新流式内容
+                        _streamingContent.value += contentChunk
+                        
+                        // 更新临时消息的内容
+                        val currentMessages = _currentSession.value?.messages?.toMutableList() ?: return@generateVisionUnderstandingStream
+                        if (currentMessages.isNotEmpty()) {
+                            val lastIndex = currentMessages.size - 1
+                            currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = _streamingContent.value)
+                            val updatedSessionWithStream = _currentSession.value?.copy(messages = currentMessages)
+                            _currentSession.value = updatedSessionWithStream
+                        }
+                    },
+                    onComplete = { result ->
+                        // 流式输出完成，创建最终的AI消息
+                        val finalAiMessage = ChatMessage(content = result.content, isFromUser = false)
+                        val finalMessages = updatedMessages + finalAiMessage
                         val finalSession = updatedSession.copy(messages = finalMessages)
                         
                         _currentSession.value = finalSession

@@ -95,24 +95,11 @@ object FileUtils {
     fun isMimeTypeSupported(mimeType: String): Boolean {
         val supportedTypes = listOf(
             // 图片
-            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp",
-            // 视频
-            "video/mp4", "video/avi", "video/mov", "video/wmv", "video/flv",
-            // 音频
-            "audio/mp3", "audio/wav", "audio/aac", "audio/ogg", "audio/m4a",
-            // 文档
-            "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            // 文本
-            "text/plain", "text/html", "text/css", "text/javascript", "application/json"
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"
         )
         
         return supportedTypes.any { mimeType.startsWith(it) } || 
-               mimeType.startsWith("image/") || 
-               mimeType.startsWith("video/") || 
-               mimeType.startsWith("audio/") || 
-               mimeType.startsWith("text/")
+               mimeType.startsWith("image/")
     }
     
     /**

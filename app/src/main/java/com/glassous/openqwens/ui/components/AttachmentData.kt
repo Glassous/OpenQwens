@@ -1,5 +1,7 @@
 package com.glassous.openqwens.ui.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -12,10 +14,6 @@ enum class AttachmentType(
     val mimeTypePrefix: String
 ) {
     IMAGE("image", "图片", "图片文件", "image/"),
-    VIDEO("video", "视频", "视频文件", "video/"),
-    AUDIO("audio", "音频", "音频文件", "audio/"),
-    DOCUMENT("document", "文档", "文档文件", "application/"),
-    TEXT("text", "文本", "文本文件", "text/"),
     OTHER("other", "其他", "其他文件", "")
 }
 
@@ -30,7 +28,7 @@ data class AttachmentData(
     val mimeType: String,
     val attachmentType: AttachmentType,
     val base64Content: String,
-    val icon: ImageVector,
+    @Transient val icon: ImageVector? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) {
     /**
@@ -62,6 +60,16 @@ data class AttachmentData(
             }
         }
     }
+    
+    /**
+     * 获取文件类型图标
+     */
+    fun getFileIcon(): ImageVector {
+        return icon ?: when (attachmentType) {
+            AttachmentType.IMAGE -> Icons.Default.Image
+            AttachmentType.OTHER -> Icons.Default.AttachFile
+        }
+    }
 }
 
 /**
@@ -70,14 +78,6 @@ data class AttachmentData(
 fun getMimeTypeAttachmentType(mimeType: String): AttachmentType {
     return when {
         mimeType.startsWith("image/") -> AttachmentType.IMAGE
-        mimeType.startsWith("video/") -> AttachmentType.VIDEO
-        mimeType.startsWith("audio/") -> AttachmentType.AUDIO
-        mimeType.startsWith("text/") -> AttachmentType.TEXT
-        mimeType.startsWith("application/pdf") -> AttachmentType.DOCUMENT
-        mimeType.startsWith("application/msword") -> AttachmentType.DOCUMENT
-        mimeType.startsWith("application/vnd.openxmlformats-officedocument") -> AttachmentType.DOCUMENT
-        mimeType.startsWith("application/vnd.ms-excel") -> AttachmentType.DOCUMENT
-        mimeType.startsWith("application/vnd.ms-powerpoint") -> AttachmentType.DOCUMENT
         else -> AttachmentType.OTHER
     }
 }

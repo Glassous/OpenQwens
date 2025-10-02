@@ -24,12 +24,9 @@ enum class FunctionType(
     WEB_SEARCH("web_search", "联网搜索", "搜索最新信息"),
     IMAGE_GENERATION("image_generation", "图片生成", "AI生成图片"),
     IMAGE_EDITING("image_editing", "图片编辑", "编辑和修改图片"),
-    VIDEO_GENERATION("video_generation", "视频生成", "AI生成视频"),
+    VISION_UNDERSTANDING("vision_understanding", "视觉理解", "分析和理解图片内容"),
     
     // 附件类型
     CAMERA("camera", "相机", "拍照或录像"),
-    IMAGE("image", "图片", "从相册选择"),
-    VIDEO("video", "视频", "选择视频文件"),
-    AUDIO("audio", "音频", "选择音频文件"),
-    FILE("file", "文件", "选择任意文件")
+    IMAGE("image", "图片", "从相册选择")
 }

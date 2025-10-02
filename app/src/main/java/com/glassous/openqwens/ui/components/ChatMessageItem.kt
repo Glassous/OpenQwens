@@ -152,9 +152,23 @@ fun ChatMessageItem(
                         }
                     }
                     
+                    // 显示附件（如果有）
+                    if (message.attachments?.isNotEmpty() == true) {
+                        if (message.content.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        
+                        AttachmentCardList(
+                            attachments = message.attachments ?: emptyList(),
+                            onRemoveAttachment = { /* 已发送的消息不允许删除附件 */ },
+                            showRemoveButton = false, // 不显示删除按钮
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    
                     // 显示图片（如果有）
                     if (message.imageUrls.isNotEmpty()) {
-                        if (message.content.isNotBlank()) {
+                        if (message.content.isNotBlank() || (message.attachments?.isNotEmpty() == true)) {
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                         

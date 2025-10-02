@@ -65,7 +65,7 @@ fun AttachmentCard(
             ) {
                 // 文件类型图标
                 Icon(
-                    imageVector = getAttachmentIcon(attachment.attachmentType),
+                    imageVector = attachment.getFileIcon(),
                     contentDescription = attachment.attachmentType.displayName,
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary
@@ -102,6 +102,71 @@ fun AttachmentCard(
 }
 
 /**
+ * 只读附件卡片组件（不显示删除按钮）
+ * 用于已发送消息中的附件显示
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AttachmentCardReadOnly(
+    attachment: AttachmentData,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .width(125.dp) // 比功能卡片(100dp)宽25%
+            .height(45.dp), // 降低至原来的1/2
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        // 主要内容 - 水平布局
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            // 文件类型图标
+            Icon(
+                imageVector = attachment.getFileIcon(),
+                contentDescription = attachment.attachmentType.displayName,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.width(6.dp))
+            
+            // 文件信息列
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                // 文件名
+                Text(
+                    text = attachment.getDisplayFileName(12),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                // 文件大小
+                Text(
+                    text = attachment.getFormattedFileSize(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/**
  * 附件卡片列表组件
  * 横向滚动显示多个附件
  */
@@ -109,7 +174,8 @@ fun AttachmentCard(
 fun AttachmentCardList(
     attachments: List<AttachmentData>,
     onRemoveAttachment: (AttachmentData) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showRemoveButton: Boolean = true
 ) {
     if (attachments.isNotEmpty()) {
         LazyRow(
@@ -118,10 +184,16 @@ fun AttachmentCardList(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(attachments) { attachment ->
-                AttachmentCard(
-                    attachment = attachment,
-                    onRemove = { onRemoveAttachment(attachment) }
-                )
+                if (showRemoveButton) {
+                    AttachmentCard(
+                        attachment = attachment,
+                        onRemove = { onRemoveAttachment(attachment) }
+                    )
+                } else {
+                    AttachmentCardReadOnly(
+                        attachment = attachment
+                    )
+                }
             }
         }
     }
@@ -133,10 +205,6 @@ fun AttachmentCardList(
 fun getAttachmentIcon(attachmentType: AttachmentType): ImageVector {
     return when (attachmentType) {
         AttachmentType.IMAGE -> Icons.Default.Image
-        AttachmentType.VIDEO -> Icons.Default.VideoLibrary
-        AttachmentType.AUDIO -> Icons.Default.AudioFile
-        AttachmentType.DOCUMENT -> Icons.Default.Description
-        AttachmentType.TEXT -> Icons.Default.TextSnippet
         AttachmentType.OTHER -> Icons.Default.InsertDriveFile
     }
 }
@@ -149,18 +217,6 @@ fun getAttachmentCardColors(attachmentType: AttachmentType): CardColors {
     return when (attachmentType) {
         AttachmentType.IMAGE -> CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-        )
-        AttachmentType.VIDEO -> CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
-        )
-        AttachmentType.AUDIO -> CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f)
-        )
-        AttachmentType.DOCUMENT -> CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
-        )
-        AttachmentType.TEXT -> CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
         )
         AttachmentType.OTHER -> CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)

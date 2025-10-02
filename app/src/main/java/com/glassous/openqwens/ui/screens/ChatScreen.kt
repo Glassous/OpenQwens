@@ -204,14 +204,8 @@ fun ChatScreen(
     // 处理功能选择
     val handleFunctionSelected: (FunctionType) -> Unit = { functionType ->
         // 如果是附件类型，启动文件选择器
-        if (functionType in listOf(FunctionType.IMAGE, FunctionType.VIDEO, FunctionType.AUDIO, FunctionType.FILE)) {
-            when (functionType) {
-                FunctionType.IMAGE -> filePickerLauncher.launch("image/*")
-                FunctionType.VIDEO -> filePickerLauncher.launch("video/*")
-                FunctionType.AUDIO -> filePickerLauncher.launch("audio/*")
-                FunctionType.FILE -> filePickerLauncher.launch("*/*")
-                else -> {}
-            }
+        if (functionType == FunctionType.IMAGE) {
+            filePickerLauncher.launch("image/*")
         } else if (functionType == FunctionType.CAMERA) {
             // 相机功能，请求权限并启动相机
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -226,7 +220,7 @@ fun ChatScreen(
                     FunctionType.WEB_SEARCH -> Icons.Default.Search
                     FunctionType.IMAGE_GENERATION -> Icons.Default.Palette
                     FunctionType.IMAGE_EDITING -> Icons.Default.Edit
-                    FunctionType.VIDEO_GENERATION -> Icons.Default.Movie
+                    FunctionType.VISION_UNDERSTANDING -> Icons.Default.Visibility
                     FunctionType.CAMERA -> Icons.Default.CameraAlt
                     else -> Icons.Default.Functions
                 }
@@ -354,7 +348,7 @@ fun ChatScreen(
                     // 输入框
                     ChatInputBar(
                         onSendMessage = { message ->
-                            viewModel.sendMessageStream(message, selectedFunctions)
+                            viewModel.sendMessageStream(message, selectedFunctions, selectedAttachments)
                         },
                         onShowAttachmentOptions = { showAttachmentBottomSheet = true }, // 显示附件选项
                         isLoading = isLoading || isStreaming // 流式输出时也显示为加载状态
