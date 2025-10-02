@@ -9,25 +9,25 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import com.glassous.openqwens.data.ChatMessage
-import com.glassous.openqwens.ui.activities.MessageDetailActivity
-import java.text.SimpleDateFormat
-import java.util.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.glassous.openqwens.data.ChatMessage
+import com.glassous.openqwens.ui.activities.MessageDetailActivity
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -102,15 +102,28 @@ fun ChatMessageItem(
                 ) {
                     // 显示文本内容
                     if (message.content.isNotBlank()) {
-                        MarkdownText(
-                            markdown = message.content,
-                            color = if (message.isFromUser) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        // 检查是否为深度思考消息
+                        if (message.content.contains("====================思考过程====================") ||
+                            message.content.contains("====================完整回复====================")) {
+                            // 使用深度思考卡片组件
+                            val (reasoningContent, finalContent) = parseDeepThinkingContent(message.content)
+                            DeepThinkingCard(
+                                reasoningContent = reasoningContent,
+                                finalContent = finalContent,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            // 普通消息使用原有的显示方式
+                            MarkdownText(
+                                markdown = message.content,
+                                color = if (message.isFromUser) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
                     
                     // 显示图片（如果有）

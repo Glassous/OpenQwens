@@ -8,6 +8,7 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
 import com.glassous.openqwens.network.ImageGenerationService
+import com.glassous.openqwens.network.DeepThinkingService
 import com.glassous.openqwens.ui.components.SelectedFunction
 import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
 import com.glassous.openqwens.utils.ImageDownloadManager
@@ -22,6 +23,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val chatApi = DashScopeApi(configManager)
     private val imageDownloadManager = ImageDownloadManager(application)
     private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
+    private val deepThinkingService = DeepThinkingService(configManager)
     private val repository = ChatRepository(application)
     
     private val _currentSession = MutableStateFlow<ChatSession?>(null)
@@ -75,8 +77,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _currentSession.value = updatedSession
         updateSessionInList(updatedSession)
         
-        // 检查是否选择了图片生成功能
+        // 检查是否选择了图片生成功能或深度思考功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         
         // 发送到API并获取回复（传递完整的消息历史）
         viewModelScope.launch {
@@ -92,6 +95,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             isFromUser = false
                         )
                     }
+                } else if (hasDeepThinking) {
+                    // 使用深度思考服务
+                    var deepThinkingResponse: ChatMessage? = null
+                    
+                    deepThinkingService.generateDeepThinkingForChat(
+                        messageHistory = updatedMessages,
+                        onReasoningContent = { reasoning ->
+                            // 可以在这里处理思考过程的实时显示，暂时不处理
+                        },
+                        onFinalContent = { finalContent ->
+                            // 可以在这里处理最终回复的实时显示，暂时不处理
+                        },
+                        onComplete = { chatMessage ->
+                            deepThinkingResponse = chatMessage
+                        },
+                        onError = { errorMessage ->
+                            deepThinkingResponse = ChatMessage(
+                                content = "抱歉，深度思考功能暂时不可用：$errorMessage",
+                                isFromUser = false
+                            )
+                        }
+                    )
+                    
+                    // 返回深度思考的结果
+                    deepThinkingResponse ?: ChatMessage(
+                        content = "抱歉，深度思考功能暂时不可用，请稍后重试。",
+                        isFromUser = false
+                    )
                 } else {
                     // 使用普通聊天API
                     chatApi.sendMessage(updatedMessages)
@@ -128,11 +159,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessageStream(content: String, selectedFunctions: List<SelectedFunction> = emptyList()) {
         val currentSession = _currentSession.value ?: return
         
-        // 检查是否选择了图片生成功能
+        // 检查是否选择了图片生成功能或深度思考功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         
-        if (hasImageGeneration) {
-            // 图片生成不支持流式输出，使用普通发送方法
+        if (hasImageGeneration || hasDeepThinking) {
+            // 图片生成和深度思考不支持流式输出，使用普通发送方法
             sendMessage(content, selectedFunctions)
             return
         }
