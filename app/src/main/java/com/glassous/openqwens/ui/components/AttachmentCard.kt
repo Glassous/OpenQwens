@@ -1,5 +1,7 @@
 package com.glassous.openqwens.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -105,7 +107,7 @@ fun AttachmentCard(
  * 只读附件卡片组件（不显示删除按钮）
  * 用于已发送消息中的附件显示
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AttachmentCardReadOnly(
     attachment: AttachmentData,
@@ -114,7 +116,11 @@ fun AttachmentCardReadOnly(
     Card(
         modifier = modifier
             .width(125.dp) // 比功能卡片(100dp)宽25%
-            .height(45.dp), // 降低至原来的1/2
+            .height(45.dp) // 降低至原来的1/2
+            .combinedClickable(
+                onClick = { /* 空的点击处理，不做任何操作 */ },
+                onLongClick = { /* 空的长按处理，让事件传播到父组件 */ }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
         ),

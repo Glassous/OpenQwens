@@ -1,8 +1,9 @@
-    package com.glassous.openqwens.ui.components
+package com.glassous.openqwens.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,6 +55,7 @@ fun WebSearchCard(
 /**
  * 可展开的内容区域组件
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExpandableSection(
     title: String,
@@ -71,7 +73,10 @@ private fun ExpandableSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }
+            .combinedClickable(
+                onClick = { isExpanded = !isExpanded },
+                onLongClick = { /* 不处理长按，让事件传播到父组件 */ }
+            )
             .animateContentSize(),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
