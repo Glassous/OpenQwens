@@ -79,6 +79,9 @@ dependencies {
     // Image loading library
     implementation("io.coil-kt:coil-compose:2.5.0")
     
+    // Markdown support
+    implementation("org.jetbrains:markdown:0.7.3")
+    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

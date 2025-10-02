@@ -75,7 +75,7 @@ fun ChatMessageItem(
         horizontalArrangement = if (message.isFromUser) Arrangement.End else Arrangement.Start
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 280.dp),
+            modifier = Modifier.widthIn(max = 350.dp),
             horizontalAlignment = if (message.isFromUser) Alignment.End else Alignment.Start
         ) {
             Card(
@@ -102,14 +102,14 @@ fun ChatMessageItem(
                 ) {
                     // 显示文本内容
                     if (message.content.isNotBlank()) {
-                        Text(
-                            text = message.content,
+                        MarkdownText(
+                            markdown = message.content,
                             color = if (message.isFromUser) {
                                 MaterialTheme.colorScheme.onPrimary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                     

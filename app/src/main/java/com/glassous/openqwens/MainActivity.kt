@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = androidx.compose.ui.graphics.Color.Transparent
                 ) {
                     val viewModel: ChatViewModel = viewModel()
                     ChatScreen(viewModel = viewModel)

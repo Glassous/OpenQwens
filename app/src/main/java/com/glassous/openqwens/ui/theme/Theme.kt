@@ -68,6 +68,9 @@ fun OpenQwensTheme(
             window.statusBarColor = android.graphics.Color.TRANSPARENT
             window.navigationBarColor = android.graphics.Color.TRANSPARENT
             
+            // 禁用导航栏对比度强制，确保完全透明
+            window.isNavigationBarContrastEnforced = false
+            
             // 启用edge-to-edge显示
             WindowCompat.setDecorFitsSystemWindows(window, false)
             

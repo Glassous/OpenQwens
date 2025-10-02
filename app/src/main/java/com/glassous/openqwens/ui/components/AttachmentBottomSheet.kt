@@ -43,7 +43,8 @@ fun AttachmentBottomSheet(
         modifier = modifier,
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        scrimColor = androidx.compose.ui.graphics.Color.Transparent
     ) {
         // 使用AnimatedContent实现菜单切换动画
         AnimatedContent(
