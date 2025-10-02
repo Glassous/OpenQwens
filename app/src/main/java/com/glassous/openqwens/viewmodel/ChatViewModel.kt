@@ -9,6 +9,7 @@ import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
 import com.glassous.openqwens.network.ImageGenerationService
 import com.glassous.openqwens.network.DeepThinkingService
+import com.glassous.openqwens.network.WebSearchService
 import com.glassous.openqwens.ui.components.SelectedFunction
 import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
 import com.glassous.openqwens.utils.ImageDownloadManager
@@ -24,6 +25,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val imageDownloadManager = ImageDownloadManager(application)
     private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
     private val deepThinkingService = DeepThinkingService(configManager)
+    private val webSearchService = WebSearchService(configManager)
     private val repository = ChatRepository(application)
     
     private val _currentSession = MutableStateFlow<ChatSession?>(null)
@@ -77,9 +79,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _currentSession.value = updatedSession
         updateSessionInList(updatedSession)
         
-        // 检查是否选择了图片生成功能或深度思考功能
+        // 检查是否选择了图片生成功能、深度思考功能或联网搜索功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
+        val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
         
         // 发送到API并获取回复（传递完整的消息历史）
         viewModelScope.launch {
@@ -123,6 +126,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         content = "抱歉，深度思考功能暂时不可用，请稍后重试。",
                         isFromUser = false
                     )
+                } else if (hasWebSearch) {
+                    // 使用联网搜索服务
+                    val searchResult = webSearchService.performWebSearchForChat(updatedMessages)
+                    if (searchResult.isSuccess) {
+                        searchResult.getOrThrow()
+                    } else {
+                        ChatMessage(
+                            content = "抱歉，联网搜索失败，请稍后重试。",
+                            isFromUser = false
+                        )
+                    }
                 } else {
                     // 使用普通聊天API
                     chatApi.sendMessage(updatedMessages)
@@ -162,6 +176,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // 检查是否选择了图片生成功能或深度思考功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
+        val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
         
         if (hasImageGeneration || hasDeepThinking) {
             // 图片生成和深度思考不支持流式输出，使用普通发送方法
@@ -189,54 +204,106 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         
         // 发送流式请求
         viewModelScope.launch {
-            chatApi.sendMessageStream(
-                messageHistory = updatedMessages,
-                onStreamContent = { contentChunk ->
-                    // 更新流式内容
-                    _streamingContent.value += contentChunk
-                    
-                    // 更新临时消息的内容
-                    val currentMessages = _currentSession.value?.messages?.toMutableList() ?: return@sendMessageStream
-                    if (currentMessages.isNotEmpty()) {
-                        val lastIndex = currentMessages.size - 1
-                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = _streamingContent.value)
-                        val updatedSessionWithStream = _currentSession.value?.copy(messages = currentMessages)
-                        _currentSession.value = updatedSessionWithStream
+            if (hasWebSearch) {
+                // 使用联网搜索的流式输出
+                webSearchService.performWebSearchForChatStream(
+                    messageHistory = updatedMessages,
+                    onContent = { contentChunk ->
+                        // 更新流式内容
+                        _streamingContent.value += contentChunk
+                        
+                        // 更新临时消息的内容
+                        val currentMessages = _currentSession.value?.messages?.toMutableList() ?: return@performWebSearchForChatStream
+                        if (currentMessages.isNotEmpty()) {
+                            val lastIndex = currentMessages.size - 1
+                            currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = _streamingContent.value)
+                            val updatedSessionWithStream = _currentSession.value?.copy(messages = currentMessages)
+                            _currentSession.value = updatedSessionWithStream
+                        }
+                    },
+                    onComplete = { finalMessage ->
+                        // 流式输出完成，使用最终的AI消息
+                        val finalMessages = updatedMessages + finalMessage
+                        val finalSession = updatedSession.copy(messages = finalMessages)
+                        
+                        _currentSession.value = finalSession
+                        updateSessionInList(finalSession)
+                        
+                        // 保存到本地存储
+                        saveSessions()
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
+                    },
+                    onError = { errorMessage ->
+                        // 处理错误
+                        val errorMsg = ChatMessage(
+                            content = "抱歉，发生了错误：$errorMessage",
+                            isFromUser = false
+                        )
+                        val errorMessages = updatedMessages + errorMsg
+                        val errorSession = updatedSession.copy(messages = errorMessages)
+                        
+                        _currentSession.value = errorSession
+                        updateSessionInList(errorSession)
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
                     }
-                },
-                onComplete = { fullContent ->
-                    // 流式输出完成，创建最终的AI消息
-                    val finalAiMessage = ChatMessage(content = fullContent, isFromUser = false)
-                    val finalMessages = updatedMessages + finalAiMessage
-                    val finalSession = updatedSession.copy(messages = finalMessages)
-                    
-                    _currentSession.value = finalSession
-                    updateSessionInList(finalSession)
-                    
-                    // 保存到本地存储
-                    saveSessions()
-                    
-                    // 重置流式状态
-                    _isStreaming.value = false
-                    _streamingContent.value = ""
-                },
-                onError = { errorMessage ->
-                    // 处理错误
-                    val errorMsg = ChatMessage(
-                        content = "抱歉，发生了错误：$errorMessage",
-                        isFromUser = false
-                    )
-                    val errorMessages = updatedMessages + errorMsg
-                    val errorSession = updatedSession.copy(messages = errorMessages)
-                    
-                    _currentSession.value = errorSession
-                    updateSessionInList(errorSession)
-                    
-                    // 重置流式状态
-                    _isStreaming.value = false
-                    _streamingContent.value = ""
-                }
-            )
+                )
+            } else {
+                // 使用普通聊天的流式输出
+                chatApi.sendMessageStream(
+                    messageHistory = updatedMessages,
+                    onStreamContent = { contentChunk ->
+                        // 更新流式内容
+                        _streamingContent.value += contentChunk
+                        
+                        // 更新临时消息的内容
+                        val currentMessages = _currentSession.value?.messages?.toMutableList() ?: return@sendMessageStream
+                        if (currentMessages.isNotEmpty()) {
+                            val lastIndex = currentMessages.size - 1
+                            currentMessages[lastIndex] = currentMessages[lastIndex].copy(content = _streamingContent.value)
+                            val updatedSessionWithStream = _currentSession.value?.copy(messages = currentMessages)
+                            _currentSession.value = updatedSessionWithStream
+                        }
+                    },
+                    onComplete = { fullContent ->
+                        // 流式输出完成，创建最终的AI消息
+                        val finalAiMessage = ChatMessage(content = fullContent, isFromUser = false)
+                        val finalMessages = updatedMessages + finalAiMessage
+                        val finalSession = updatedSession.copy(messages = finalMessages)
+                        
+                        _currentSession.value = finalSession
+                        updateSessionInList(finalSession)
+                        
+                        // 保存到本地存储
+                        saveSessions()
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
+                    },
+                    onError = { errorMessage ->
+                        // 处理错误
+                        val errorMsg = ChatMessage(
+                            content = "抱歉，发生了错误：$errorMessage",
+                            isFromUser = false
+                        )
+                        val errorMessages = updatedMessages + errorMsg
+                        val errorSession = updatedSession.copy(messages = errorMessages)
+                        
+                        _currentSession.value = errorSession
+                        updateSessionInList(errorSession)
+                        
+                        // 重置流式状态
+                        _isStreaming.value = false
+                        _streamingContent.value = ""
+                    }
+                )
+            }
         }
     }
     

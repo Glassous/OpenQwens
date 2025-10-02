@@ -112,6 +112,32 @@ fun ChatMessageItem(
                                 finalContent = finalContent,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                        } else if (message.content.contains("====================搜索结果====================") ||
+                                   message.content.contains("====================联网搜索结果====================") ||
+                                   message.content.contains("====================回复内容====================")) {
+                            // 使用网络搜索卡片组件
+                            val (searchResults, replyContent, mainContent) = parseWebSearchContent(message.content)
+                            
+                            // 显示搜索结果和回复内容的折叠卡片
+                            WebSearchCard(
+                                searchResults = searchResults,
+                                replyContent = replyContent,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            // 显示正文内容（支持ref_n引用）
+                            if (mainContent.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                MarkdownText(
+                                    markdown = mainContent,
+                                    color = if (message.isFromUser) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         } else {
                             // 普通消息使用原有的显示方式
                             MarkdownText(

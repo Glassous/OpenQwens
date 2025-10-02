@@ -56,6 +56,7 @@ fun MarkdownFootnotes(
 fun parseFootnoteReferences(text: String): Pair<String, Map<String, String>> {
     val footnotePattern = Regex("\\[\\^([^\\]]+)\\]")
     val footnoteDefPattern = Regex("\\[\\^([^\\]]+)\\]:\\s*(.+)")
+    val refPattern = Regex("ref_(\\d+)")
     
     val footnotes = mutableMapOf<String, String>()
     val lines = text.split("\n").toMutableList()
@@ -80,6 +81,12 @@ fun parseFootnoteReferences(text: String): Pair<String, Map<String, String>> {
         if (footnotes.containsKey(id)) {
             processedText = processedText.replace(match.value, "^$id")
         }
+    }
+    
+    // 处理ref_n引用，将其转换为上标格式
+    refPattern.findAll(processedText).forEach { match ->
+        val refNumber = match.groupValues[1]
+        processedText = processedText.replace(match.value, "^[$refNumber]")
     }
     
     return Pair(processedText, footnotes)
