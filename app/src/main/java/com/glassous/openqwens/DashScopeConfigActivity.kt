@@ -127,9 +127,9 @@ fun DashScopeConfigScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 8.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             DashScopeConfigSection(dashScopeConfigManager = dashScopeConfigManager)
         }
@@ -148,28 +148,10 @@ private fun DashScopeConfigSection(dashScopeConfigManager: DashScopeConfigManage
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "阿里云百炼模型配置",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
+            // 删除重复的标题，因为顶部栏已有
             BaseUrlConfigSection(dashScopeConfigManager = dashScopeConfigManager)
             ApiKeyConfigSection(dashScopeConfigManager = dashScopeConfigManager)
             ModelManagementSection(dashScopeConfigManager = dashScopeConfigManager)
@@ -180,6 +162,7 @@ private fun DashScopeConfigSection(dashScopeConfigManager: DashScopeConfigManage
 @Composable
 private fun BaseUrlConfigSection(dashScopeConfigManager: DashScopeConfigManager) {
     Column(
+        modifier = Modifier.padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
@@ -216,6 +199,7 @@ private fun BaseUrlConfigSection(dashScopeConfigManager: DashScopeConfigManager)
 @Composable
 private fun ApiKeyConfigSection(dashScopeConfigManager: DashScopeConfigManager) {
     Column(
+        modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
@@ -258,7 +242,8 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
     var editingModel by remember { mutableStateOf<DashScopeModel?>(null) }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -307,8 +292,7 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -398,7 +382,7 @@ private fun ModelItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             RadioButton(
@@ -438,8 +422,7 @@ private fun ModelItem(
                         color = if (isSelected)
                             MaterialTheme.colorScheme.onPrimaryContainer
                         else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 6.dp)
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
