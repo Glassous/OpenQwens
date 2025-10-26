@@ -5,9 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,14 +25,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,9 +38,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,7 +45,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,16 +57,10 @@ import androidx.compose.ui.unit.dp
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
 import com.glassous.openqwens.ui.theme.DashScopeModel
 import com.glassous.openqwens.ui.theme.OpenQwensTheme
-import com.glassous.openqwens.ui.theme.ThemeManager
-import com.glassous.openqwens.ui.theme.ThemeMode
 import com.glassous.openqwens.ui.theme.rememberDashScopeConfigManager
 import com.glassous.openqwens.ui.theme.rememberThemeManager
-import java.util.UUID
-import android.app.Activity
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 
-class SettingsActivity : ComponentActivity() {
+class DashScopeConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -89,10 +74,9 @@ class SettingsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SettingsScreen(
-                        themeManager = themeManager,
+                    DashScopeConfigScreen(
                         dashScopeConfigManager = dashScopeConfigManager,
-                        onBackClick = { 
+                        onBackClick = {
                             finish()
                             overridePendingTransition(
                                 com.glassous.openqwens.R.anim.slide_in_left,
@@ -101,28 +85,29 @@ class SettingsActivity : ComponentActivity() {
                         }
                     )
                 }
+            }
         }
     }
 
+    override fun onBackPressed() {
+        super.onBackPressed()
+        overridePendingTransition(
+            R.anim.slide_in_left,
+            R.anim.slide_out_right
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    themeManager: ThemeManager,
+fun DashScopeConfigScreen(
     dashScopeConfigManager: DashScopeConfigManager,
     onBackClick: () -> Unit
 ) {
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "设置",
-                        fontWeight = FontWeight.Medium
-                    )
-                },
+                title = { Text("阿里云百炼模型配置", fontWeight = FontWeight.Medium) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -146,64 +131,8 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 主题模式设置
-            ThemeModeSection(themeManager = themeManager)
-            
-            // 阿里云百炼模型配置入口
-            val context = LocalContext.current
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "阿里云百炼模型配置",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Text(
-                            text = "管理基础URL、API密钥与模型列表",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent(context, DashScopeConfigActivity::class.java)
-                            context.startActivity(intent)
-                            (context as? Activity)?.overridePendingTransition(
-                                R.anim.slide_in_right,
-                                R.anim.slide_out_left
-                            )
-                        },
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-                    ) {
-                        Text(text = "打开配置", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-         }
+            DashScopeConfigSection(dashScopeConfigManager = dashScopeConfigManager)
+        }
     }
 }
 
@@ -222,7 +151,6 @@ private fun DashScopeConfigSection(dashScopeConfigManager: DashScopeConfigManage
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 标题区域
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -241,14 +169,9 @@ private fun DashScopeConfigSection(dashScopeConfigManager: DashScopeConfigManage
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            
-            // 基础URL配置
+
             BaseUrlConfigSection(dashScopeConfigManager = dashScopeConfigManager)
-            
-            // API密钥配置
             ApiKeyConfigSection(dashScopeConfigManager = dashScopeConfigManager)
-            
-            // 模型管理
             ModelManagementSection(dashScopeConfigManager = dashScopeConfigManager)
         }
     }
@@ -269,16 +192,16 @@ private fun BaseUrlConfigSection(dashScopeConfigManager: DashScopeConfigManager)
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        
+
         OutlinedTextField(
             value = dashScopeConfigManager.baseUrl,
             onValueChange = { dashScopeConfigManager.setBaseUrl(it) },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { 
+            placeholder = {
                 Text(
                     text = "请输入基础URL",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                ) 
+                )
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -305,16 +228,16 @@ private fun ApiKeyConfigSection(dashScopeConfigManager: DashScopeConfigManager) 
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        
+
         OutlinedTextField(
             value = dashScopeConfigManager.apiKey,
             onValueChange = { dashScopeConfigManager.setApiKey(it) },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { 
+            placeholder = {
                 Text(
                     text = "请输入API密钥",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                ) 
+                )
             },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -333,11 +256,10 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingModel by remember { mutableStateOf<DashScopeModel?>(null) }
-    
+
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 标题和添加按钮
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -353,7 +275,7 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            
+
             FilledTonalButton(
                 onClick = { showAddDialog = true },
                 modifier = Modifier.height(40.dp),
@@ -371,8 +293,7 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
                 )
             }
         }
-        
-        // 模型列表
+
         if (dashScopeConfigManager.models.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -423,8 +344,7 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             }
         }
     }
-    
-    // 添加模型对话框
+
     if (showAddDialog) {
         AddModelDialog(
             onDismiss = { showAddDialog = false },
@@ -434,12 +354,11 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             }
         )
     }
-    
-    // 编辑模型对话框
+
     if (showEditDialog && editingModel != null) {
         EditModelDialog(
             model = editingModel!!,
-            onDismiss = { 
+            onDismiss = {
                 showEditDialog = false
                 editingModel = null
             },
@@ -461,18 +380,16 @@ private fun ModelItem(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = if (isSelected) 
+        border = if (isSelected)
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else 
+        else
             BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 4.dp else 1.dp
@@ -492,9 +409,9 @@ private fun ModelItem(
                     unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -507,26 +424,26 @@ private fun ModelItem(
                         text = model.name,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
                             MaterialTheme.colorScheme.onSurface
                     )
                 }
-                
+
                 if (model.description.isNotEmpty()) {
                     Text(
                         text = model.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
                             MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 6.dp)
                     )
                 }
             }
-            
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -537,14 +454,14 @@ private fun ModelItem(
                     Icon(
                         imageVector = Icons.Filled.Edit,
                         contentDescription = "编辑模型",
-                        tint = if (isSelected) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
+                        tint = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
                             MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                
+
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(40.dp)
@@ -568,7 +485,7 @@ private fun AddModelDialog(
 ) {
     var modelName by remember { mutableStateOf("") }
     var modelDescription by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("添加模型") },
@@ -583,7 +500,7 @@ private fun AddModelDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
+
                 OutlinedTextField(
                     value = modelDescription,
                     onValueChange = { modelDescription = it },
@@ -627,7 +544,7 @@ private fun EditModelDialog(
 ) {
     var modelName by remember { mutableStateOf(model.name) }
     var modelDescription by remember { mutableStateOf(model.description) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("编辑模型") },
@@ -642,7 +559,7 @@ private fun EditModelDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
+
                 OutlinedTextField(
                     value = modelDescription,
                     onValueChange = { modelDescription = it },
@@ -675,102 +592,4 @@ private fun EditModelDialog(
             }
         }
     )
-}
-
-@Composable
-private fun ThemeModeSection(themeManager: ThemeManager) {
-    val currentThemeMode = themeManager.getThemeMode()
-    val themeOptions = listOf("系统", "浅色", "深色")
-    val selectedIndex = when (currentThemeMode) {
-        ThemeMode.SYSTEM.value -> 0
-        ThemeMode.LIGHT.value -> 1
-        ThemeMode.DARK.value -> 2
-        else -> 0
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "主题模式",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                themeOptions.forEachIndexed { index, option ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = themeOptions.size
-                        ),
-                        onClick = {
-                            val newThemeMode = when (index) {
-                                0 -> ThemeMode.SYSTEM
-                                1 -> ThemeMode.LIGHT
-                                2 -> ThemeMode.DARK
-                                else -> ThemeMode.SYSTEM
-                            }
-                            themeManager.setThemeMode(newThemeMode)
-                        },
-                        selected = index == selectedIndex
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                        ) {
-                            when (index) {
-                                1 -> Icon(
-                                    imageVector = Icons.Filled.LightMode,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                2 -> Icon(
-                                    imageVector = Icons.Filled.DarkMode,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                else -> Icon(
-                                    imageVector = Icons.Filled.Settings,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            }
-
-            val currentModeText = when (selectedIndex) {
-                0 -> "当前模式：跟随系统"
-                1 -> "当前模式：浅色"
-                2 -> "当前模式：深色"
-                else -> "当前模式：跟随系统"
-            }
-            Text(
-                text = currentModeText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 }

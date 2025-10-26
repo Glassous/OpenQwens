@@ -68,8 +68,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         createNewChat()
     }
     
+    fun createNewChat() {
+        // 清空主页，不立即创建新对话
+        _currentSession.value = null
+    }
+    
     fun sendMessage(content: String, selectedFunctions: List<SelectedFunction> = emptyList(), selectedAttachments: List<AttachmentData> = emptyList()) {
-        val currentSession = _currentSession.value ?: return
+        // 如果当前没有会话，创建一个临时会话用于显示对话
+        val currentSession = _currentSession.value ?: run {
+            val tempSession = ChatSession(title = "新对话")
+            _currentSession.value = tempSession
+            tempSession
+        }
         
         // 立即设置加载状态为true，显示加载动画
         _isLoading.value = true
@@ -80,7 +90,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val updatedSession = currentSession.copy(messages = updatedMessages)
         
         _currentSession.value = updatedSession
-        updateSessionInList(updatedSession)
         
         // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
@@ -183,7 +192,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val finalSession = updatedSession.copy(messages = finalMessages)
                 
                 _currentSession.value = finalSession
+                
+                // 第一段对话完成后，将会话添加到会话列表并保存
+                if (!_chatSessions.value.any { it.id == finalSession.id }) {
+                    _chatSessions.value = listOf(finalSession) + _chatSessions.value
+                }
                 updateSessionInList(finalSession)
+                
                 // 保存到本地存储
                 saveSessions()
             } catch (e: Exception) {
@@ -196,6 +211,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val errorSession = updatedSession.copy(messages = errorMessages)
                 
                 _currentSession.value = errorSession
+                
+                // 即使出错，也要将会话添加到列表中
+                if (!_chatSessions.value.any { it.id == errorSession.id }) {
+                    _chatSessions.value = listOf(errorSession) + _chatSessions.value
+                }
                 updateSessionInList(errorSession)
             } finally {
                 _isLoading.value = false
@@ -207,7 +227,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
      * 流式发送消息（支持实时输出）
      */
     fun sendMessageStream(content: String, selectedFunctions: List<SelectedFunction> = emptyList(), selectedAttachments: List<AttachmentData> = emptyList()) {
-        val currentSession = _currentSession.value ?: return
+        // 如果当前没有会话，创建一个临时会话用于显示对话
+        val currentSession = _currentSession.value ?: run {
+            val tempSession = ChatSession(title = "新对话")
+            _currentSession.value = tempSession
+            tempSession
+        }
         
         // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
@@ -232,7 +257,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val updatedSession = currentSession.copy(messages = updatedMessages)
         
         _currentSession.value = updatedSession
-        updateSessionInList(updatedSession)
         
         // 创建一个临时的AI消息用于显示流式内容
         val tempAiMessage = ChatMessage(content = "", isFromUser = false)
@@ -265,6 +289,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val finalSession = updatedSession.copy(messages = finalMessages)
                         
                         _currentSession.value = finalSession
+                        
+                        // 第一段对话完成后，将会话添加到会话列表并保存
+                        if (!_chatSessions.value.any { it.id == finalSession.id }) {
+                            _chatSessions.value = listOf(finalSession) + _chatSessions.value
+                        }
                         updateSessionInList(finalSession)
                         
                         // 保存到本地存储
@@ -284,6 +313,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val errorSession = updatedSession.copy(messages = errorMessages)
                         
                         _currentSession.value = errorSession
+                        
+                        // 即使出错，也要将会话添加到列表中
+                        if (!_chatSessions.value.any { it.id == errorSession.id }) {
+                            _chatSessions.value = listOf(errorSession) + _chatSessions.value
+                        }
                         updateSessionInList(errorSession)
                         
                         // 重置流式状态
@@ -316,6 +350,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val finalSession = updatedSession.copy(messages = finalMessages)
                         
                         _currentSession.value = finalSession
+                        
+                        // 第一段对话完成后，将会话添加到会话列表并保存
+                        if (!_chatSessions.value.any { it.id == finalSession.id }) {
+                            _chatSessions.value = listOf(finalSession) + _chatSessions.value
+                        }
                         updateSessionInList(finalSession)
                         
                         // 保存到本地存储
@@ -335,6 +374,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val errorSession = updatedSession.copy(messages = errorMessages)
                         
                         _currentSession.value = errorSession
+                        
+                        // 即使出错，也要将会话添加到列表中
+                        if (!_chatSessions.value.any { it.id == errorSession.id }) {
+                            _chatSessions.value = listOf(errorSession) + _chatSessions.value
+                        }
                         updateSessionInList(errorSession)
                         
                         // 重置流式状态
@@ -366,6 +410,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val finalSession = updatedSession.copy(messages = finalMessages)
                         
                         _currentSession.value = finalSession
+                        
+                        // 第一段对话完成后，将会话添加到会话列表并保存
+                        if (!_chatSessions.value.any { it.id == finalSession.id }) {
+                            _chatSessions.value = listOf(finalSession) + _chatSessions.value
+                        }
                         updateSessionInList(finalSession)
                         
                         // 保存到本地存储
@@ -385,6 +434,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         val errorSession = updatedSession.copy(messages = errorMessages)
                         
                         _currentSession.value = errorSession
+                        
+                        // 即使出错，也要将会话添加到列表中
+                        if (!_chatSessions.value.any { it.id == errorSession.id }) {
+                            _chatSessions.value = listOf(errorSession) + _chatSessions.value
+                        }
                         updateSessionInList(errorSession)
                         
                         // 重置流式状态
@@ -396,18 +450,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    fun createNewChat() {
-        // 检查当前会话是否为空，避免创建重复的空记录
-        val currentSession = _currentSession.value
-        if (currentSession != null && currentSession.messages.isEmpty()) {
-            // 如果当前会话已经是空的，不需要创建新的
-            return
-        }
-        
-        val newSession = ChatSession(title = "新对话")
-        _currentSession.value = newSession
-        _chatSessions.value = listOf(newSession) + _chatSessions.value
-    }
+
     
     fun selectSession(session: ChatSession) {
         _currentSession.value = session

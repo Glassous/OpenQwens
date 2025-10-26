@@ -59,6 +59,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.glassous.openqwens.utils.ImageUtils
+import com.glassous.openqwens.ui.components.ImagePreviewDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,6 +89,11 @@ fun ChatScreen(
     
     val currentSession by viewModel.currentSession.collectAsState()
     val chatSessions by viewModel.chatSessions.collectAsState()
+    
+    // 图片预览对话框状态
+    var showImagePreview by remember { mutableStateOf(false) }
+    var selectedImageIndex by remember { mutableStateOf(0) }
+    var previewImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     val isLoading by viewModel.isLoading.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
     val streamingContent by viewModel.streamingContent.collectAsState()
@@ -262,6 +268,11 @@ fun ChatScreen(
                 },
                 onRenameSession = { sessionId, newTitle ->
                     viewModel.renameSession(sessionId, newTitle)
+                },
+                onImageClick = { imagePaths, index ->
+                    previewImagePaths = imagePaths
+                    selectedImageIndex = index
+                    showImagePreview = true
                 }
             )
         }
@@ -305,22 +316,7 @@ fun ChatScreen(
                         }
                     },
                     actions = {
-                        IconButton(
-                            onClick = {
-                                val intent = Intent(context, SettingsActivity::class.java)
-                                context.startActivity(intent)
-                                // 添加从右侧滑入的动画
-                                (context as? android.app.Activity)?.overridePendingTransition(
-                                    com.glassous.openqwens.R.anim.slide_in_right,
-                                    com.glassous.openqwens.R.anim.slide_out_left
-                                )
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "设置"
-                            )
-                        }
+                        // 移除设置按钮，将其移动到侧边栏
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -364,7 +360,7 @@ fun ChatScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                if (currentSession?.messages?.isEmpty() == true) {
+                if (currentSession?.messages?.isEmpty() != false) {
                     // 空状态 - 显示时间段问候语
                     Column(
                         modifier = Modifier
@@ -428,6 +424,19 @@ fun ChatScreen(
             selectedAttachments = selectedAttachments
         )
     }
+    
+    // 图片预览对话框
+    if (showImagePreview) {
+        ImagePreviewDialog(
+            imageUrls = emptyList(),
+            localImagePaths = previewImagePaths,
+            initialIndex = selectedImageIndex,
+            onDismiss = { showImagePreview = false },
+            onSaveImage = { imagePath ->
+                // 这里可以添加保存图片的逻辑，目前暂时不处理
+            }
+        )
+    }
 }
 
 
@@ -440,7 +449,8 @@ fun NavigationDrawerContent(
     onNewChat: () -> Unit,
     onSelectSession: (ChatSession) -> Unit,
     onDeleteSession: (String) -> Unit,
-    onRenameSession: (String, String) -> Unit
+    onRenameSession: (String, String) -> Unit,
+    onImageClick: (List<String>, Int) -> Unit = { _, _ -> }
 ) {
     var showDeleteDialog by remember { mutableStateOf<ChatSession?>(null) }
     var showRenameDialog by remember { mutableStateOf<ChatSession?>(null) }
@@ -495,7 +505,8 @@ fun NavigationDrawerContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .clickable {
-                                // 点击图片时可以添加预览功能
+                                // 点击图片时调用图片详情组件
+                                onImageClick(generatedImages, index)
                             },
                         shape = RoundedCornerShape(8.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -547,8 +558,10 @@ fun NavigationDrawerContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             
-            // 聊天会话列表
-            LazyColumn {
+            // 聊天会话列表 - 使用weight让它占据剩余空间
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+            ) {
                 items(chatSessions) { session ->
                     ChatSessionItem(
                         session = session,
@@ -559,6 +572,35 @@ fun NavigationDrawerContent(
                     )
                 }
             }
+            
+            // 底部设置按钮
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            
+            NavigationDrawerItem(
+                label = { 
+                    Text(
+                        text = "设置",
+                        fontWeight = FontWeight.Medium
+                    ) 
+                },
+                selected = false,
+                onClick = {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                    // 添加从右侧滑入的动画
+                    (context as? android.app.Activity)?.overridePendingTransition(
+                        com.glassous.openqwens.R.anim.slide_in_right,
+                        com.glassous.openqwens.R.anim.slide_out_left
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "设置"
+                    )
+                },
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
         }
     }
     
