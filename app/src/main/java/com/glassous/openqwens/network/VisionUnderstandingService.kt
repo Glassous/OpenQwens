@@ -130,7 +130,7 @@ class VisionUnderstandingService(
             // 构建参数
             val param = MultiModalConversationParam.builder()
                 .apiKey(apiKey)
-                .model(VISION_MODEL)
+                .model(configManager.getSelectedModel()?.id ?: VISION_MODEL)
                 .messages(messages)
                 .build()
             
@@ -189,7 +189,7 @@ class VisionUnderstandingService(
             // 构建参数
             val param = MultiModalConversationParam.builder()
                 .apiKey(apiKey)
-                .model(VISION_MODEL)
+                .model(configManager.getSelectedModel()?.id ?: VISION_MODEL)
                 .incrementalOutput(true)  // 开启增量输出
                 .messages(messages)
                 .build()

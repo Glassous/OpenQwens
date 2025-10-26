@@ -98,7 +98,7 @@ class WebSearchService(
             // 构建参数
             val param = GenerationParam.builder()
                 .apiKey(apiKey)
-                .model(WEB_SEARCH_MODEL)
+                .model(configManager.getSelectedModel()?.id ?: WEB_SEARCH_MODEL)
                 .messages(messages)
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .enableSearch(true)
@@ -234,7 +234,7 @@ class WebSearchService(
             // 构建参数
             val param = GenerationParam.builder()
                 .apiKey(apiKey)
-                .model(WEB_SEARCH_MODEL)
+                .model(configManager.getSelectedModel()?.id ?: WEB_SEARCH_MODEL)
                 .messages(messages)
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .enableSearch(true)

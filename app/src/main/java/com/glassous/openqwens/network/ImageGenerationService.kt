@@ -56,7 +56,7 @@ class ImageGenerationService(
             
             val param = ImageSynthesisParam.builder()
                 .apiKey(apiKey)
-                .model(MODEL_NAME)
+                .model(configManager.getSelectedModel()?.id ?: MODEL_NAME)
                 .prompt(prompt)
                 .n(count)
                 .size(size)

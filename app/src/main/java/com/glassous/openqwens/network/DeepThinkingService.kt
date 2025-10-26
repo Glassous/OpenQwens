@@ -86,7 +86,7 @@ class DeepThinkingService(
             // 构建参数
             val param = GenerationParam.builder()
                 .apiKey(apiKey)
-                .model(DEEP_THINKING_MODEL)
+                .model(configManager.getSelectedModel()?.id ?: DEEP_THINKING_MODEL)
                 .enableThinking(true)  // 开启深度思考
                 .incrementalOutput(true)  // 开启增量输出
                 .resultFormat("message")  // 设置结果格式
