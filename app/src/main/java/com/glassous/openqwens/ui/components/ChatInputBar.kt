@@ -31,26 +31,7 @@ fun ChatInputBar(
                 .padding(16.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // 功能按钮
-            FloatingActionButton(
-                onClick = onShowAttachmentOptions,
-                modifier = Modifier.size(width = 28.dp, height = 56.dp),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 0.dp,
-                    focusedElevation = 0.dp,
-                    hoveredElevation = 0.dp
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "附件选项"
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
+            // 移除外部左侧按钮，改为输入框内部的leadingIcon
             
             OutlinedTextField(
                 value = message,
@@ -65,6 +46,26 @@ fun ChatInputBar(
                     )
                 },
                 shape = RoundedCornerShape(28.dp),
+                leadingIcon = {
+                    // 缩小按钮尺寸，并与输入框边线保持适当距离
+                    Box(modifier = Modifier.padding(start = 8.dp, end = 4.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(28.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            IconButton(
+                                onClick = onShowAttachmentOptions,
+                                modifier = Modifier.size(44.dp) // 更紧凑的方形尺寸，仍保持可点性
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "附件选项"
+                                )
+                            }
+                        }
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline

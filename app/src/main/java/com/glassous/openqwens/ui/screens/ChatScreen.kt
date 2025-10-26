@@ -56,10 +56,12 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.blur
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.glassous.openqwens.utils.ImageUtils
 import com.glassous.openqwens.ui.components.ImagePreviewDialog
+import com.glassous.openqwens.ui.components.ModelSelectionBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +95,8 @@ fun ChatScreen(
     // 图片预览对话框状态
     var showImagePreview by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableStateOf(0) }
+    // 控制长按弹窗出现时的背景模糊
+    var isActionMenuVisible by remember { mutableStateOf(false) }
     var previewImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     val isLoading by viewModel.isLoading.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
@@ -102,6 +106,7 @@ fun ChatScreen(
     
     // Bottom Sheet 状态
     var showAttachmentBottomSheet by remember { mutableStateOf(false) }
+    var showModelBottomSheet by remember { mutableStateOf(false) }
     
     // 选中的功能列表状态
     var selectedFunctions by remember { mutableStateOf(listOf<SelectedFunction>()) }
@@ -292,10 +297,20 @@ fun ChatScreen(
                             selectedModel != null -> selectedModel.name
                             else -> "OpenQwens"
                         }
-                        Text(
-                            text = titleText,
-                            fontWeight = FontWeight.Medium
-                        )
+                        TextButton(
+                            onClick = { showModelBottomSheet = true },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                text = titleText,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
                     },
                     navigationIcon = {
                         IconButton(
@@ -359,6 +374,7 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .then(if (isActionMenuVisible) Modifier.blur(12.dp) else Modifier)
             ) {
                 if (currentSession?.messages?.isEmpty() != false) {
                     // 空状态 - 显示时间段问候语
@@ -398,7 +414,8 @@ fun ChatScreen(
                                         scope.launch {
                                             snackbarHostState.showSnackbar(text)
                                         }
-                                    }
+                                    },
+                                    onBackdropBlurChanged = { visible -> isActionMenuVisible = visible }
                                 )
                             }
                         }
@@ -422,6 +439,14 @@ fun ChatScreen(
             onFunctionSelected = handleFunctionSelected,
             selectedFunctions = selectedFunctions,
             selectedAttachments = selectedAttachments
+        )
+    }
+    
+    // 显示模型选择 Bottom Sheet
+    if (showModelBottomSheet) {
+        ModelSelectionBottomSheet(
+            onDismiss = { showModelBottomSheet = false },
+            dashScopeConfigManager = dashScopeConfigManager
         )
     }
     
