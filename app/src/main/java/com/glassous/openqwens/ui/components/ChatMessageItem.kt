@@ -152,12 +152,21 @@ fun ChatMessageItem(
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                             
-                            AttachmentCardList(
-                                attachments = message.attachments ?: emptyList(),
-                                onRemoveAttachment = { /* 已发送的消息不允许删除附件 */ },
-                                showRemoveButton = false, // 不显示删除按钮
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { },
+                                        onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
+                                    )
+                            ) {
+                                AttachmentCardList(
+                                    attachments = message.attachments ?: emptyList(),
+                                    onRemoveAttachment = { /* 已发送的消息不允许删除附件 */ },
+                                    showRemoveButton = false, // 不显示删除按钮
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                         
                         // 显示图片（如果有）
@@ -177,17 +186,25 @@ fun ChatMessageItem(
                                         imageUrl
                                     }
                                     
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(LocalContext.current)
-                                            .data(imageSource)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "生成的图片",
+                                    Box(
                                         modifier = Modifier
-                                            .size(200.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
+                                            .combinedClickable(
+                                                onClick = { },
+                                                onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
+                                            )
+                                    ) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(imageSource)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "生成的图片",
+                                            modifier = Modifier
+                                                .size(200.dp)
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -196,11 +213,11 @@ fun ChatMessageItem(
             } else {
                 Column(
                     modifier = Modifier
+                        .padding(horizontal = 2.dp)
                         .combinedClickable(
                             onClick = { },
                             onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
                         )
-                        .padding(horizontal = 2.dp) // 回复内容直接渲染，增加2dp左右间距
                 ) {
                     // 显示文本内容
                     if (message.content.isNotBlank()) {
@@ -242,12 +259,21 @@ fun ChatMessageItem(
                         if (message.content.isNotBlank()) {
                             Spacer(modifier = Modifier.height(8.dp))
                         }
-                        AttachmentCardList(
-                            attachments = message.attachments ?: emptyList(),
-                            onRemoveAttachment = { },
-                            showRemoveButton = false,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = { },
+                                    onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
+                                )
+                        ) {
+                            AttachmentCardList(
+                                attachments = message.attachments ?: emptyList(),
+                                onRemoveAttachment = { },
+                                showRemoveButton = false,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                     
                     if (message.imageUrls.isNotEmpty()) {
@@ -263,17 +289,25 @@ fun ChatMessageItem(
                                 } else {
                                     imageUrl
                                 }
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(imageSource)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = "生成的图片",
+                                Box(
                                     modifier = Modifier
-                                        .size(200.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                                        .combinedClickable(
+                                            onClick = { },
+                                            onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
+                                        )
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(imageSource)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "生成的图片",
+                                        modifier = Modifier
+                                            .size(200.dp)
+                                            .clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
                             }
                         }
                     }
