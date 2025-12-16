@@ -403,22 +403,6 @@ fun ChatScreen(
                         .background(Color.Transparent) // 使用Color.Transparent替代androidx.compose.ui.graphics.Color.Transparent
                         .fillMaxWidth()
                 ) {
-                    // 混合卡片列表（附件和功能卡片在同一行）
-                    val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
-                    val hasVideoGen = selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id }
-                    
-                    MixedCardList(
-                        selectedAttachments = selectedAttachments,
-                        selectedFunctions = selectedFunctions,
-                        onRemoveAttachment = handleAttachmentRemoved,
-                        onRemoveFunction = handleFunctionRemoved,
-                        showSettings = hasImageGen || hasVideoGen,
-                        onSettingsClick = { showSettingsDialog = true },
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .background(Color.Transparent) // 强制透明背景
-                    )
-                    
                     // 输入框
                     ChatInputBar(
                         onSendMessage = { message ->
@@ -464,10 +448,12 @@ fun ChatScreen(
                     }
                 } else {
                     // 聊天消息列表
+                    // 增加底部Padding，确保内容不被悬浮卡片遮挡
+                    val bottomPadding = if (selectedAttachments.isNotEmpty() || selectedFunctions.isNotEmpty()) 100.dp else 8.dp
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                        contentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding)
                     ) {
                         currentSession?.messages?.let { messages ->
                             items(messages) { message ->
@@ -491,6 +477,25 @@ fun ChatScreen(
                         }
                     }
                 }
+                
+                // 浮动混合卡片列表（附件和功能卡片在同一行）
+                // 位于Box底部，悬浮于内容之上，背景完全透明
+                if (selectedAttachments.isNotEmpty() || selectedFunctions.isNotEmpty()) {
+                    val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
+                    val hasVideoGen = selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id }
+                    
+                    MixedCardList(
+                        selectedAttachments = selectedAttachments,
+                        selectedFunctions = selectedFunctions,
+                        onRemoveAttachment = handleAttachmentRemoved,
+                        onRemoveFunction = handleFunctionRemoved,
+                        showSettings = hasImageGen || hasVideoGen,
+                        onSettingsClick = { showSettingsDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }
@@ -510,7 +515,7 @@ fun ChatScreen(
         val requiredGroup = remember(selectedFunctions) {
             when {
                 selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id } -> ModelGroup.VIDEO
-                selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id } -> ModelGroup.IMAGE
+                selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id } -> ModelGroup.IMAGE
                 else -> ModelGroup.TEXT
             }
         }
