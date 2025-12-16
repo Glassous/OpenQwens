@@ -18,6 +18,9 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.*
 import com.glassous.openqwens.ui.theme.ModelGroup
 
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelSelectionBottomSheet(
@@ -43,50 +46,53 @@ fun ModelSelectionBottomSheet(
         contentColor = MaterialTheme.colorScheme.onSurface,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp)
         ) {
             // 标题
-            Text(
-                text = "选择模型",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+            item {
+                Text(
+                    text = "选择模型",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+            }
 
             // 分组选择
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (requiredGroup != null) {
-                     FilterChip(
-                        selected = true,
-                        onClick = { },
-                        label = { Text(requiredGroup.displayName) },
-                        enabled = true,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    )
-                } else {
-                    ModelGroup.values().forEach { group ->
-                        FilterChip(
-                            selected = selectedGroup == group,
-                            onClick = { selectedGroup = group },
-                            label = { Text(group.displayName) },
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (requiredGroup != null) {
+                         FilterChip(
+                            selected = true,
+                            onClick = { },
+                            label = { Text(requiredGroup.displayName) },
+                            enabled = true,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         )
+                    } else {
+                        ModelGroup.values().forEach { group ->
+                            FilterChip(
+                                selected = selectedGroup == group,
+                                onClick = { selectedGroup = group },
+                                label = { Text(group.displayName) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -101,45 +107,47 @@ fun ModelSelectionBottomSheet(
             }
             
             if (filteredModels.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Filled.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(48.dp).padding(bottom = 16.dp)
-                        )
-                        Text(
-                            "该分组下暂无模型",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Filled.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(48.dp).padding(bottom = 16.dp)
+                            )
+                            Text(
+                                "该分组下暂无模型",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    filteredModels.forEach { model ->
-                        val isSelected = model.id == dashScopeConfigManager.selectedModelId
-                        ModelOptionRow(
-                            title = model.name,
-                            description = model.description,
-                            isSelected = isSelected,
-                            onClick = {
-                                dashScopeConfigManager.setSelectedModel(model.id)
-                                onDismiss()
-                            }
-                        )
-                    }
+                items(filteredModels) { model ->
+                    val isSelected = model.id == dashScopeConfigManager.selectedModelId
+                    ModelOptionRow(
+                        title = model.name,
+                        description = model.description,
+                        isSelected = isSelected,
+                        onClick = {
+                            dashScopeConfigManager.setSelectedModel(model.id)
+                            onDismiss()
+                        },
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }

@@ -30,6 +30,7 @@ import com.glassous.openqwens.ui.components.FunctionCardList
 import com.glassous.openqwens.ui.components.SelectedFunction
 import com.glassous.openqwens.ui.components.FunctionType
 import com.glassous.openqwens.ui.components.AttachmentCardList
+import com.glassous.openqwens.ui.components.AttachmentType
 import com.glassous.openqwens.ui.components.AttachmentData
 import com.glassous.openqwens.ui.components.MixedCardList
 import com.glassous.openqwens.ui.components.FunctionExclusionManager
@@ -258,6 +259,26 @@ fun ChatScreen(
         } else if (functionType == FunctionType.CAMERA) {
             // 相机功能，请求权限并启动相机
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        } else if (functionType == FunctionType.IMAGE_EDITING) {
+            // 图片编辑功能，检查是否已上传图片
+            val hasImage = selectedAttachments.any { it.attachmentType == AttachmentType.IMAGE }
+            if (!hasImage) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("请先上传图片")
+                }
+            } else {
+                // 添加功能（后续逻辑会自动切换模型组）
+                val newFunction = SelectedFunction(
+                    id = functionType.id,
+                    name = functionType.displayName,
+                    description = functionType.description,
+                    icon = Icons.Default.Edit
+                )
+                
+                if (!selectedFunctions.any { it.id == newFunction.id }) {
+                    selectedFunctions = selectedFunctions + newFunction
+                }
+            }
         } else {
             // 功能类型，添加到功能列表
             val newFunction = SelectedFunction(
@@ -331,7 +352,7 @@ fun ChatScreen(
                         val models by remember { derivedStateOf { dashScopeConfigManager.models } }
                         val selectedModel = models.find { it.id == selectedModelId }
                         val titleText = when {
-                            selectedModel != null -> selectedModel.name
+                            selectedModel != null -> selectedModel.description
                             else -> "OpenQwens"
                         }
                         TextButton(
