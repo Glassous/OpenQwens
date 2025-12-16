@@ -33,6 +33,7 @@ import coil.request.ImageRequest
 import coil.decode.VideoFrameDecoder
 import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.activities.MessageDetailActivity
+import com.glassous.openqwens.ui.activities.MediaViewerActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -348,7 +349,13 @@ fun ChatMessageItem(
                                     imageUrl
                                 }
                                 Box(
-                                    modifier = Modifier
+                                    modifier = Modifier.clickable {
+                                        val intent = Intent(context, MediaViewerActivity::class.java).apply {
+                                            putExtra("media_path", imageSource.replace("file://", ""))
+                                            putExtra("is_video", false)
+                                        }
+                                        context.startActivity(intent)
+                                    }
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
@@ -376,15 +383,16 @@ fun ChatMessageItem(
                             videoUrl = message.localVideoPath ?: message.videoUrl!!,
                             onPlay = {
                                 try {
-                                    val uri = if (!message.localVideoPath.isNullOrBlank()) {
-                                        android.net.Uri.fromFile(java.io.File(message.localVideoPath))
+                                    val path = if (!message.localVideoPath.isNullOrBlank()) {
+                                        message.localVideoPath
                                     } else {
-                                        android.net.Uri.parse(message.videoUrl)
+                                        message.videoUrl
                                     }
                                     
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, "video/*")
-                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    val intent = Intent(context, MediaViewerActivity::class.java).apply {
+                                        putExtra("media_path", path)
+                                        putExtra("is_video", true)
+                                    }
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
                                     onShowSnackbar("无法播放视频")

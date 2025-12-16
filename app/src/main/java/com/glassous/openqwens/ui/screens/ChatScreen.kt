@@ -69,6 +69,7 @@ import com.glassous.openqwens.ui.theme.ModelGroup
 
 import com.glassous.openqwens.ui.components.GenerationSettingsDialog
 
+import com.glassous.openqwens.ui.activities.MediaViewerActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -116,12 +117,8 @@ fun ChatScreen(
     val currentSession by viewModel.currentSession.collectAsState()
     val chatSessions by viewModel.chatSessions.collectAsState()
     
-    // 图片预览对话框状态
-    var showImagePreview by remember { mutableStateOf(false) }
-    var selectedImageIndex by remember { mutableStateOf(0) }
     // 控制长按弹窗出现时的背景模糊
     var isActionMenuVisible by remember { mutableStateOf(false) }
-    var previewImagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     val isLoading by viewModel.isLoading.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
     val streamingContent by viewModel.streamingContent.collectAsState()
@@ -315,11 +312,6 @@ fun ChatScreen(
                 },
                 onRenameSession = { sessionId, newTitle ->
                     viewModel.renameSession(sessionId, newTitle)
-                },
-                onImageClick = { imagePaths, index ->
-                    previewImagePaths = imagePaths
-                    selectedImageIndex = index
-                    showImagePreview = true
                 }
             )
         }
@@ -506,19 +498,6 @@ fun ChatScreen(
         )
     }
     
-    // 图片预览对话框
-    if (showImagePreview) {
-        ImagePreviewDialog(
-            imageUrls = emptyList(),
-            localImagePaths = previewImagePaths,
-            initialIndex = selectedImageIndex,
-            onDismiss = { showImagePreview = false },
-            onSaveImage = { imagePath ->
-                // 这里可以添加保存图片的逻辑，目前暂时不处理
-            }
-        )
-    }
-
     // 生成参数设置对话框
     if (showSettingsDialog) {
         val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
@@ -546,8 +525,7 @@ fun NavigationDrawerContent(
     onNewChat: () -> Unit,
     onSelectSession: (ChatSession) -> Unit,
     onDeleteSession: (String) -> Unit,
-    onRenameSession: (String, String) -> Unit,
-    onImageClick: (List<String>, Int) -> Unit = { _, _ -> }
+    onRenameSession: (String, String) -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf<ChatSession?>(null) }
     var showRenameDialog by remember { mutableStateOf<ChatSession?>(null) }
@@ -602,43 +580,28 @@ fun NavigationDrawerContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .clickable {
-                                when (item) {
-                                    is MediaItem.Image -> {
-                                        // 过滤出所有图片用于预览
-                                        val images = generatedMedia.filterIsInstance<MediaItem.Image>().map { it.path }
-                                        val imageIndex = images.indexOf(item.path)
-                                        if (imageIndex != -1) {
-                                            onImageClick(images, imageIndex)
-                                        }
-                                    }
-                                    is MediaItem.Video -> {
-                                        // 播放视频
-                                        try {
-                                            val uri = if (item.path.startsWith("http")) {
-                                                android.net.Uri.parse(item.path)
-                                            } else {
-                                                android.net.Uri.fromFile(java.io.File(item.path))
-                                            }
-                                            val intent = Intent(Intent.ACTION_VIEW)
-                                            intent.setDataAndType(uri, "video/*")
-                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            // 忽略错误
-                                        }
-                                    }
+                                val intent = Intent(context, MediaViewerActivity::class.java).apply {
+                                    putExtra("media_path", item.filePath)
+                                    putExtra("is_video", item is MediaItem.Video)
                                 }
+                                context.startActivity(intent)
                             },
                         shape = RoundedCornerShape(8.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
+                            val requestBuilder = ImageRequest.Builder(context)
+                                .data(item.filePath)
+                                .crossfade(true)
+                                
+                            if (item is MediaItem.Video) {
+                                requestBuilder.decoderFactory { result, options, _ -> 
+                                    VideoFrameDecoder(result.source, options) 
+                                }
+                            }
+                                    
                             AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(item.filePath)
-                                    .decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
-                                    .crossfade(true)
-                                    .build(),
+                                model = requestBuilder.build(),
                                 contentDescription = "生成的内容 ${index + 1}",
                                 modifier = Modifier
                                     .fillMaxSize()

@@ -46,6 +46,10 @@
         <activity
             android:name=".ui.activities.MessageDetailActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.activities.MediaViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OpenQwens" />
         
         <!-- FileProvider for camera images -->
         <provider

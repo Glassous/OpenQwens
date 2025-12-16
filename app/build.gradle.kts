@@ -80,6 +80,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("io.coil-kt:coil-video:2.5.0")
     
+    // Video Player (Media3)
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
+    implementation("androidx.media3:media3-common:1.2.0")
+
     // Markdown support
     implementation("org.jetbrains:markdown:0.7.3")
     
