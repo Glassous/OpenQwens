@@ -11,6 +11,7 @@ data class ChatMessage(
     val imageUrls: List<String> = emptyList(),  // 图片URL列表
     val isImageGeneration: Boolean = false,     // 是否为图片生成消息
     val videoUrl: String? = null,               // 视频URL
+    val localVideoPath: String? = null,         // 本地视频路径
     val localImagePaths: List<String> = emptyList(),  // 本地图片路径列表
     val attachments: List<AttachmentData>? = emptyList()  // 附件列表，可为null以兼容旧数据
 )

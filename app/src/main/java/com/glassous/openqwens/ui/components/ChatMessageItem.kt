@@ -10,7 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -19,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -26,13 +30,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.decode.VideoFrameDecoder
 import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.activities.MessageDetailActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ChatMessageItem(
     message: ChatMessage,
@@ -42,7 +47,6 @@ fun ChatMessageItem(
 ) {
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val context = LocalContext.current
-    var showActionMenu by remember { mutableStateOf(false) }
     
     // 复制功能
     val copyToClipboard: () -> Unit = {
@@ -79,14 +83,12 @@ fun ChatMessageItem(
             horizontalAlignment = if (message.isFromUser) Alignment.End else Alignment.Start
         ) {
             if (message.isFromUser) {
-                Card(
-                    modifier = Modifier.combinedClickable(
-                        onClick = { },
-                        onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                    ),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
+                Column(horizontalAlignment = Alignment.End) {
+                    Card(
+                        modifier = Modifier,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
                     shape = RoundedCornerShape(
                         topStart = 16.dp,
                         topEnd = 16.dp,
@@ -158,10 +160,6 @@ fun ChatMessageItem(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = { },
-                                        onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                                    )
                             ) {
                                 AttachmentCardList(
                                     attachments = message.attachments ?: emptyList(),
@@ -191,10 +189,6 @@ fun ChatMessageItem(
                                     
                                     Box(
                                         modifier = Modifier
-                                            .combinedClickable(
-                                                onClick = { },
-                                                onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                                            )
                                     ) {
                                         AsyncImage(
                                             model = ImageRequest.Builder(LocalContext.current)
@@ -219,11 +213,17 @@ fun ChatMessageItem(
                             }
                             
                             VideoPlayerCard(
-                                videoUrl = message.videoUrl!!,
+                                videoUrl = message.localVideoPath ?: message.videoUrl!!,
                                 onPlay = {
                                     try {
+                                        val uri = if (!message.localVideoPath.isNullOrBlank()) {
+                                            android.net.Uri.fromFile(java.io.File(message.localVideoPath))
+                                        } else {
+                                            android.net.Uri.parse(message.videoUrl)
+                                        }
+                                        
                                         val intent = Intent(Intent.ACTION_VIEW)
-                                        intent.setDataAndType(android.net.Uri.parse(message.videoUrl), "video/*")
+                                        intent.setDataAndType(uri, "video/*")
                                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         context.startActivity(intent)
                                     } catch (e: Exception) {
@@ -233,15 +233,53 @@ fun ChatMessageItem(
                             )
                         }
                     }
+                    
+                    // 消息操作按钮
+                    Row(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 复制按钮
+                        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+                            IconButton(
+                                onClick = copyToClipboard,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.ContentCopy,
+                                    contentDescription = "复制",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            
+                            // 分享按钮
+                            IconButton(
+                                onClick = {
+                                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                        putExtra(Intent.EXTRA_TEXT, message.content)
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, null)
+                                    context.startActivity(shareIntent)
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription = "分享",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
-            } else {
+            }
+        } else {
                 Column(
                     modifier = Modifier
                         .padding(horizontal = 2.dp)
-                        .combinedClickable(
-                            onClick = { },
-                            onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                        )
                 ) {
                     // 显示文本内容
                     if (message.content.isNotBlank()) {
@@ -286,10 +324,6 @@ fun ChatMessageItem(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = { },
-                                    onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                                )
                         ) {
                             AttachmentCardList(
                                 attachments = message.attachments ?: emptyList(),
@@ -315,10 +349,6 @@ fun ChatMessageItem(
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .combinedClickable(
-                                            onClick = { },
-                                            onLongClick = { showActionMenu = true; onBackdropBlurChanged(true) }
-                                        )
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
@@ -343,11 +373,17 @@ fun ChatMessageItem(
                         }
                         
                         VideoPlayerCard(
-                            videoUrl = message.videoUrl!!,
+                            videoUrl = message.localVideoPath ?: message.videoUrl!!,
                             onPlay = {
                                 try {
+                                    val uri = if (!message.localVideoPath.isNullOrBlank()) {
+                                        android.net.Uri.fromFile(java.io.File(message.localVideoPath))
+                                    } else {
+                                        android.net.Uri.parse(message.videoUrl)
+                                    }
+                                    
                                     val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(android.net.Uri.parse(message.videoUrl), "video/*")
+                                    intent.setDataAndType(uri, "video/*")
                                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
@@ -356,19 +392,32 @@ fun ChatMessageItem(
                             }
                         )
                     }
+
+                    // 消息操作按钮
+                    Row(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 复制按钮
+                        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+                            IconButton(
+                                onClick = copyToClipboard,
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.ContentCopy,
+                                    contentDescription = "复制",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
             // 删除时间戳显示
         }
     }
-    
-    // 长按弹窗
-    MessageActionMenu(
-        isVisible = showActionMenu,
-        onDismiss = { showActionMenu = false; onBackdropBlurChanged(false) },
-        onCopy = copyToClipboard,
-        onViewDetails = { navigateToDetail() }
-    )
 }
 
 @Composable
@@ -390,22 +439,30 @@ fun VideoPlayerCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // 背景（可以是缩略图，这里暂时用纯色+图标）
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            // 尝试加载视频缩略图
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(videoUrl)
+                    .decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "视频缩略图",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            
+            // 播放按钮叠加层
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.PlayCircle,
                     contentDescription = "播放视频",
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "点击播放视频",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White
                 )
             }
         }

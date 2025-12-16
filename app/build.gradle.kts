@@ -78,6 +78,7 @@ dependencies {
     
     // Image loading library
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-video:2.5.0")
     
     // Markdown support
     implementation("org.jetbrains:markdown:0.7.3")

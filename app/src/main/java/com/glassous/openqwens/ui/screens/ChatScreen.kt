@@ -48,6 +48,8 @@ import androidx.compose.runtime.remember
 import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
+import com.glassous.openqwens.utils.MediaUtils
+import com.glassous.openqwens.utils.MediaItem
 import java.util.Date
 import java.util.Locale
 import android.Manifest
@@ -56,10 +58,11 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.draw.blur
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.glassous.openqwens.utils.ImageUtils
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.draw.blur
+import androidx.compose.material.icons.filled.PlayCircle
 import com.glassous.openqwens.ui.components.ImagePreviewDialog
 import com.glassous.openqwens.ui.components.ModelSelectionBottomSheet
 import com.glassous.openqwens.ui.theme.ModelGroup
@@ -532,8 +535,8 @@ fun NavigationDrawerContent(
     var showRenameDialog by remember { mutableStateOf<ChatSession?>(null) }
     val context = LocalContext.current
     
-    // 获取所有生成的图片
-    val generatedImages = remember { ImageUtils.getAIGeneratedImages(context) }
+    // 获取所有生成的内容（图片和视频）
+    val generatedMedia = remember { MediaUtils.getGeneratedMedia(context) }
     
     ModalDrawerSheet {
         Column(
@@ -554,17 +557,17 @@ fun NavigationDrawerContent(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // MD3 Carousel 组件 - 显示生成的图片
-            if (generatedImages.isNotEmpty()) {
+            // MD3 Carousel 组件 - 显示生成的内容
+            if (generatedMedia.isNotEmpty()) {
                 Text(
-                    text = "生成的图片",
+                    text = "我的内容",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
-                val carouselState = rememberCarouselState { generatedImages.size }
+                val carouselState = rememberCarouselState { generatedMedia.size }
                 
                 HorizontalMultiBrowseCarousel(
                     state = carouselState,
@@ -575,29 +578,73 @@ fun NavigationDrawerContent(
                     preferredItemWidth = 100.dp,
                     itemSpacing = 8.dp
                 ) { index ->
-                    val imagePath = generatedImages[index]
+                    val item = generatedMedia[index]
                     
                     Card(
                         modifier = Modifier
                             .fillMaxSize()
                             .clickable {
-                                // 点击图片时调用图片详情组件
-                                onImageClick(generatedImages, index)
+                                when (item) {
+                                    is MediaItem.Image -> {
+                                        // 过滤出所有图片用于预览
+                                        val images = generatedMedia.filterIsInstance<MediaItem.Image>().map { it.path }
+                                        val imageIndex = images.indexOf(item.path)
+                                        if (imageIndex != -1) {
+                                            onImageClick(images, imageIndex)
+                                        }
+                                    }
+                                    is MediaItem.Video -> {
+                                        // 播放视频
+                                        try {
+                                            val uri = if (item.path.startsWith("http")) {
+                                                android.net.Uri.parse(item.path)
+                                            } else {
+                                                android.net.Uri.fromFile(java.io.File(item.path))
+                                            }
+                                            val intent = Intent(Intent.ACTION_VIEW)
+                                            intent.setDataAndType(uri, "video/*")
+                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            // 忽略错误
+                                        }
+                                    }
+                                }
                             },
                         shape = RoundedCornerShape(8.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(imagePath)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "生成的图片 ${index + 1}",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(item.filePath)
+                                    .decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "生成的内容 ${index + 1}",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            
+                            // 如果是视频，显示播放图标
+                            if (item is MediaItem.Video) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayCircle,
+                                        contentDescription = "视频",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 

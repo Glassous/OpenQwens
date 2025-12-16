@@ -16,6 +16,7 @@ import com.glassous.openqwens.ui.components.SelectedFunction
 import com.glassous.openqwens.ui.components.AttachmentData
 import com.glassous.openqwens.ui.theme.GlobalDashScopeConfigManager
 import com.glassous.openqwens.utils.ImageDownloadManager
+import com.glassous.openqwens.utils.MediaDownloadManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,8 +27,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val configManager = GlobalDashScopeConfigManager.getInstance(application)
     private val chatApi = DashScopeApi(configManager)
     private val imageDownloadManager = ImageDownloadManager(application)
+    private val mediaDownloadManager = MediaDownloadManager(application)
     private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
-    private val videoGenerationService = VideoGenerationService(configManager)
+    private val videoGenerationService = VideoGenerationService(configManager, mediaDownloadManager)
     private val deepThinkingService = DeepThinkingService(configManager)
     private val webSearchService = WebSearchService(configManager)
     private val visionUnderstandingService = VisionUnderstandingService(configManager)

@@ -8,14 +8,16 @@ import com.alibaba.dashscope.exception.NoApiKeyException
 import com.alibaba.dashscope.utils.Constants
 import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.ui.theme.DashScopeConfigManager
+import com.glassous.openqwens.data.VideoGenerationParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
 
-import com.glassous.openqwens.data.VideoGenerationParams
+import com.glassous.openqwens.utils.MediaDownloadManager
 
 class VideoGenerationService(
-    private val configManager: DashScopeConfigManager
+    private val configManager: DashScopeConfigManager,
+    private val mediaDownloadManager: MediaDownloadManager
 ) {
 
     companion object {
@@ -110,6 +112,9 @@ class VideoGenerationService(
 
             if (videoResult.isSuccess) {
                 val videoUrl = videoResult.getOrNull()
+                
+                // 下载视频到本地
+                val localVideoPath = videoUrl?.let { mediaDownloadManager.downloadVideo(it) }
 
                 // 创建包含视频的回复消息
                 val assistantMessage = ChatMessage(
@@ -118,6 +123,7 @@ class VideoGenerationService(
                     isFromUser = false,
                     timestamp = System.currentTimeMillis(),
                     videoUrl = videoUrl,
+                    localVideoPath = localVideoPath,
                     isImageGeneration = false // 视频生成不是图片生成
                 )
 
