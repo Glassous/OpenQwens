@@ -80,6 +80,21 @@ class BackupHelper(private val context: Context) {
             val json = gson.toJson(backupSessions)
             File(tempDir, "chat_data.json").writeText(json)
 
+            // Save Config
+            val prefs = context.getSharedPreferences("dashscope_config", Context.MODE_PRIVATE)
+            val config = mapOf(
+                "base_url" to prefs.getString("base_url", null),
+                "api_keys" to prefs.getString("api_keys", null),
+                "selected_api_key_id" to prefs.getString("selected_api_key_id", null),
+                "models" to prefs.getString("models", null),
+                "selected_model_id" to prefs.getString("selected_model_id", null),
+                "selected_model_id_TEXT" to prefs.getString("selected_model_id_TEXT", null),
+                "selected_model_id_IMAGE" to prefs.getString("selected_model_id_IMAGE", null),
+                "selected_model_id_VIDEO" to prefs.getString("selected_model_id_VIDEO", null)
+            )
+            val configJson = gson.toJson(config)
+            File(tempDir, "config.json").writeText(configJson)
+
             // Zip everything
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 ZipOutputStream(BufferedOutputStream(outputStream)).use { zipOut ->
@@ -106,6 +121,28 @@ class BackupHelper(private val context: Context) {
             // Unzip file
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 unzip(inputStream, tempDir)
+            }
+
+            // Restore Config
+            val configFile = File(tempDir, "config.json")
+            if (configFile.exists()) {
+                val configJson = configFile.readText()
+                val type = object : TypeToken<Map<String, String?>>() {}.type
+                val config: Map<String, String?> = gson.fromJson(configJson, type)
+                
+                val prefs = context.getSharedPreferences("dashscope_config", Context.MODE_PRIVATE)
+                val editor = prefs.edit()
+                
+                config["base_url"]?.let { editor.putString("base_url", it) }
+                config["api_keys"]?.let { editor.putString("api_keys", it) }
+                config["selected_api_key_id"]?.let { editor.putString("selected_api_key_id", it) }
+                config["models"]?.let { editor.putString("models", it) }
+                config["selected_model_id"]?.let { editor.putString("selected_model_id", it) }
+                config["selected_model_id_TEXT"]?.let { editor.putString("selected_model_id_TEXT", it) }
+                config["selected_model_id_IMAGE"]?.let { editor.putString("selected_model_id_IMAGE", it) }
+                config["selected_model_id_VIDEO"]?.let { editor.putString("selected_model_id_VIDEO", it) }
+                
+                editor.apply()
             }
 
             val jsonFile = File(tempDir, "chat_data.json")
