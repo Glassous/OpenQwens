@@ -134,7 +134,7 @@ fun SettingsScreen(
     val backupHelper = remember { BackupHelper(context) }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let {
             scope.launch {
@@ -231,7 +231,7 @@ fun SettingsScreen(
             
             ListItem(
                 headlineContent = { Text("导出数据") },
-                supportingContent = { Text("将聊天记录导出为JSON文件") },
+                supportingContent = { Text("将聊天记录导出为ZIP文件（包含图片/视频）") },
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Filled.Upload,
@@ -240,7 +240,7 @@ fun SettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { 
-                    exportLauncher.launch("openqwens_backup_${System.currentTimeMillis()}.json")
+                    exportLauncher.launch("openqwens_backup_${System.currentTimeMillis()}.zip")
                 },
                 colors = ListItemDefaults.colors(
                     containerColor = Color.Transparent
@@ -249,7 +249,7 @@ fun SettingsScreen(
             
             ListItem(
                 headlineContent = { Text("导入数据") },
-                supportingContent = { Text("从JSON文件恢复聊天记录") },
+                supportingContent = { Text("从备份文件恢复聊天记录") },
                 leadingContent = {
                     Icon(
                         imageVector = Icons.Filled.Download,
@@ -258,7 +258,7 @@ fun SettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { 
-                    importLauncher.launch(arrayOf("application/json"))
+                    importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
                 },
                 colors = ListItemDefaults.colors(
                     containerColor = Color.Transparent
