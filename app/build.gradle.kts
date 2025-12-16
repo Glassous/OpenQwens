@@ -88,6 +88,9 @@ dependencies {
     // Markdown support
     implementation("org.jetbrains:markdown:0.7.3")
     
+    // Syntax Highlighting
+    implementation("dev.snipme:highlights:1.0.0")
+    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
