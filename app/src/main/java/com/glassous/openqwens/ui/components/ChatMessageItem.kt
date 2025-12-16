@@ -12,11 +12,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +52,45 @@ fun ChatMessageItem(
 ) {
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val context = LocalContext.current
+    
+    // Extract HTML blocks for preview button
+    val htmlBlocks = remember(message.content) { extractHtmlBlocks(message.content) }
+    var showPreviewSelectDialog by remember { mutableStateOf(false) }
+
+    if (showPreviewSelectDialog) {
+        AlertDialog(
+            onDismissRequest = { showPreviewSelectDialog = false },
+            title = { Text("选择预览内容") },
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    itemsIndexed(htmlBlocks) { index, block ->
+                        TextButton(
+                            onClick = {
+                                onHtmlPreviewClick?.invoke(block)
+                                showPreviewSelectDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(8.dp)
+                        ) {
+                            Text(
+                                text = "预览 ${index + 1} (${block.take(30).replace("\n", " ")}...)",
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                        if (index < htmlBlocks.lastIndex) {
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPreviewSelectDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
     
     // 复制功能
     val copyToClipboard: () -> Unit = {
@@ -257,6 +299,27 @@ fun ChatMessageItem(
                             )
                         }
                         
+                        // 预览按钮
+                        if (htmlBlocks.isNotEmpty() && onHtmlPreviewClick != null) {
+                            IconButton(
+                                onClick = {
+                                    if (htmlBlocks.size == 1) {
+                                        onHtmlPreviewClick(htmlBlocks[0])
+                                    } else {
+                                        showPreviewSelectDialog = true
+                                    }
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "预览",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
                         // 分享按钮
                         IconButton(
                             onClick = {
@@ -424,6 +487,27 @@ fun ChatMessageItem(
                             }
                         }
                         
+                        // 预览按钮
+                        if (htmlBlocks.isNotEmpty() && onHtmlPreviewClick != null) {
+                            IconButton(
+                                onClick = {
+                                    if (htmlBlocks.size == 1) {
+                                        onHtmlPreviewClick(htmlBlocks[0])
+                                    } else {
+                                        showPreviewSelectDialog = true
+                                    }
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "预览",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
                         // 分享按钮
                         IconButton(
                             onClick = {
@@ -462,6 +546,12 @@ fun ChatMessageItem(
             // 删除时间戳显示
         }
     }
+}
+
+private fun extractHtmlBlocks(content: String): List<String> {
+    // Match code blocks with html, xml, or svg language tags
+    val regex = Regex("```(html|xml|svg)\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
+    return regex.findAll(content).map { it.groupValues[2].trim() }.toList()
 }
 
 @Composable
