@@ -49,60 +49,68 @@ fun ChatInputBar(
                 leadingIcon = {
                     // 缩小按钮尺寸，并与输入框边线保持适当距离
                     Box(modifier = Modifier.padding(start = 8.dp, end = 4.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(28.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        IconButton(
+                            onClick = onShowAttachmentOptions,
+                            modifier = Modifier.size(44.dp) // 更紧凑的方形尺寸，仍保持可点性
                         ) {
-                            IconButton(
-                                onClick = onShowAttachmentOptions,
-                                modifier = Modifier.size(44.dp) // 更紧凑的方形尺寸，仍保持可点性
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "附件选项"
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "附件选项"
+                            )
                         }
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 ),
                 enabled = !isLoading
             )
             
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            FloatingActionButton(
-                onClick = {
-                    if (message.isNotBlank()) {
-                        onSendMessage(message.trim())
-                        message = ""
-                    }
-                },
-                modifier = Modifier.size(56.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 0.dp,
-                    focusedElevation = 0.dp,
-                    hoveredElevation = 0.dp
-                )
+            androidx.compose.animation.AnimatedVisibility(
+                visible = message.isNotBlank(),
+                enter = androidx.compose.animation.expandHorizontally(
+                    expandFrom = Alignment.Start
+                ) + androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.shrinkHorizontally(
+                    shrinkTowards = Alignment.Start
+                ) + androidx.compose.animation.fadeOut()
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "发送消息"
-                    )
+                Row {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    FloatingActionButton(
+                        onClick = {
+                            if (message.isNotBlank()) {
+                                onSendMessage(message.trim())
+                                message = ""
+                            }
+                        },
+                        modifier = Modifier.size(56.dp),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "发送消息"
+                            )
+                        }
+                    }
                 }
             }
         }

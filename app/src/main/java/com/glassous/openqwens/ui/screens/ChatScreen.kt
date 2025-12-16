@@ -538,20 +538,57 @@ fun NavigationDrawerContent(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(16.dp)
         ) {
-            // 标题
-            Text(
-                text = "OpenQwens",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
+            // 标题栏：包含标题和操作按钮
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "OpenQwens",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // 新建聊天按钮
+                    IconButton(onClick = onNewChat) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "新建聊天"
+                        )
+                    }
+                    
+                    // 设置按钮
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(context, SettingsActivity::class.java)
+                            context.startActivity(intent)
+                            (context as? android.app.Activity)?.overridePendingTransition(
+                                com.glassous.openqwens.R.anim.slide_in_right,
+                                com.glassous.openqwens.R.anim.slide_out_left
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "设置"
+                        )
+                    }
+                }
+            }
             
-            HorizontalDivider()
+            // 移除分割线
+            // HorizontalDivider()
             
-            Spacer(modifier = Modifier.height(16.dp))
+            // 减小间距
+            Spacer(modifier = Modifier.height(8.dp))
             
             // MD3 Carousel 组件 - 显示生成的内容
             if (generatedMedia.isNotEmpty()) {
@@ -560,7 +597,7 @@ fun NavigationDrawerContent(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
                 
                 val carouselState = rememberCarouselState { generatedMedia.size }
@@ -632,27 +669,6 @@ fun NavigationDrawerContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
-            // 新建聊天按钮
-            NavigationDrawerItem(
-                label = { 
-                    Text(
-                        text = "新建聊天",
-                        fontWeight = FontWeight.Medium
-                    ) 
-                },
-                selected = false,
-                onClick = onNewChat,
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "新建聊天"
-                    )
-                },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
             // 聊天记录标题
             Text(
                 text = "聊天记录",
@@ -664,7 +680,8 @@ fun NavigationDrawerContent(
             
             // 聊天会话列表 - 使用weight让它占据剩余空间
             LazyColumn(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 items(chatSessions) { session ->
                     ChatSessionItem(
@@ -676,35 +693,6 @@ fun NavigationDrawerContent(
                     )
                 }
             }
-            
-            // 底部设置按钮
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            
-            NavigationDrawerItem(
-                label = { 
-                    Text(
-                        text = "设置",
-                        fontWeight = FontWeight.Medium
-                    ) 
-                },
-                selected = false,
-                onClick = {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                    // 添加从右侧滑入的动画
-                    (context as? android.app.Activity)?.overridePendingTransition(
-                        com.glassous.openqwens.R.anim.slide_in_right,
-                        com.glassous.openqwens.R.anim.slide_out_left
-                    )
-                },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "设置"
-                    )
-                },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
         }
     }
     
