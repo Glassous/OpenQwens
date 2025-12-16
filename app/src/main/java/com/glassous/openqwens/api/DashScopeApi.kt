@@ -180,14 +180,23 @@ class DashScopeApi(private val configManager: DashScopeConfigManager) {
                         try {
                             val choices = message.output?.choices
                             if (choices != null && choices.isNotEmpty()) {
-                                val content = choices[0].message?.content ?: ""
-                                val finishReason = choices[0].finishReason
+                                val choice = choices[0]
+                                val messageData = choice.message
+                                val content = messageData?.content ?: ""
+                                val reasoningContent = messageData?.reasoningContent ?: ""
+                                val finishReason = choice.finishReason
                                 
                                 // 累积完整内容
-                                fullContent.append(content)
+                                if (content.isNotEmpty()) {
+                                    fullContent.append(content)
+                                }
                                 
                                 // 实时输出内容片段
-                                onStreamContent(content)
+                                if (reasoningContent.isNotEmpty()) {
+                                    onStreamContent("<reasoning>$reasoningContent</reasoning>")
+                                } else if (content.isNotEmpty()) {
+                                    onStreamContent(content)
+                                }
                                 
                                 // 检查是否完成
                                 if (finishReason != null && finishReason != "null") {
