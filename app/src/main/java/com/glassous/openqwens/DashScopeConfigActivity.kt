@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +48,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -198,41 +208,298 @@ private fun BaseUrlConfigSection(dashScopeConfigManager: DashScopeConfigManager)
 
 @Composable
 private fun ApiKeyConfigSection(dashScopeConfigManager: DashScopeConfigManager) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingApiKey by remember { mutableStateOf<com.glassous.openqwens.ui.theme.ApiKey?>(null) }
+
     Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "API密钥",
+                text = "API密钥管理",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            FilledTonalButton(
+                onClick = { showAddDialog = true },
+                modifier = Modifier.height(36.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "添加",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
         }
 
-        OutlinedTextField(
-            value = dashScopeConfigManager.apiKey,
-            onValueChange = { dashScopeConfigManager.setApiKey(it) },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text(
-                    text = "请输入API密钥",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        if (dashScopeConfigManager.apiKeys.isEmpty()) {
+             Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
-            },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            ),
-            trailingIcon = null
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "暂无API密钥",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "点击上方添加按钮添加API密钥",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                dashScopeConfigManager.apiKeys.forEach { apiKey ->
+                    ApiKeyItem(
+                        apiKey = apiKey,
+                        isSelected = apiKey.id == dashScopeConfigManager.selectedApiKeyId,
+                        onSelect = { dashScopeConfigManager.setSelectedApiKey(apiKey.id) },
+                        onEdit = {
+                            editingApiKey = apiKey
+                            showEditDialog = true
+                        },
+                        onDelete = { dashScopeConfigManager.removeApiKey(apiKey.id) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddApiKeyDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, key ->
+                dashScopeConfigManager.addApiKey(
+                    com.glassous.openqwens.ui.theme.ApiKey(
+                        name = name,
+                        key = key
+                    )
+                )
+                showAddDialog = false
+            }
         )
     }
+
+    if (showEditDialog && editingApiKey != null) {
+        EditApiKeyDialog(
+            apiKey = editingApiKey!!,
+            onDismiss = {
+                showEditDialog = false
+                editingApiKey = null
+            },
+            onConfirm = { updatedKey ->
+                dashScopeConfigManager.updateApiKey(updatedKey)
+                showEditDialog = false
+                editingApiKey = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun ApiKeyItem(
+    apiKey: com.glassous.openqwens.ui.theme.ApiKey,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceContainer
+        ),
+        border = if (isSelected)
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        else
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 4.dp else 1.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = onSelect,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary,
+                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = apiKey.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else
+                        MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (apiKey.key.length > 8) "${apiKey.key.take(4)}...${apiKey.key.takeLast(4)}" else apiKey.key,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "编辑",
+                        modifier = Modifier.size(16.dp),
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "删除",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddApiKeyDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var key by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("添加API密钥") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text("API Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name, key) },
+                enabled = name.isNotBlank() && key.isNotBlank()
+            ) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
+}
+
+@Composable
+private fun EditApiKeyDialog(
+    apiKey: com.glassous.openqwens.ui.theme.ApiKey,
+    onDismiss: () -> Unit,
+    onConfirm: (com.glassous.openqwens.ui.theme.ApiKey) -> Unit
+) {
+    var name by remember { mutableStateOf(apiKey.name) }
+    var key by remember { mutableStateOf(apiKey.key) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑API密钥") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text("API Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(apiKey.copy(name = name, key = key)) },
+                enabled = name.isNotBlank() && key.isNotBlank()
+            ) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable
@@ -240,6 +507,12 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingModel by remember { mutableStateOf<DashScopeModel?>(null) }
+    
+    val expandedGroups = remember {
+        mutableStateMapOf<com.glassous.openqwens.ui.theme.ModelGroup, Boolean>().apply {
+            com.glassous.openqwens.ui.theme.ModelGroup.values().forEach { put(it, true) }
+        }
+    }
 
     Column(
         modifier = Modifier.padding(12.dp),
@@ -292,7 +565,8 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -311,19 +585,64 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             }
         } else {
             Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                dashScopeConfigManager.models.forEach { model ->
-                    ModelItem(
-                        model = model,
-                        isSelected = model.id == dashScopeConfigManager.selectedModelId,
-                        onSelect = { dashScopeConfigManager.setSelectedModel(model.id) },
-                        onEdit = {
-                            editingModel = model
-                            showEditDialog = true
-                        },
-                        onDelete = { dashScopeConfigManager.removeModel(model.id) }
-                    )
+                com.glassous.openqwens.ui.theme.ModelGroup.values().forEach { group ->
+                    val groupModels = dashScopeConfigManager.models.filter { it.group == group }
+                    if (groupModels.isNotEmpty()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        expandedGroups[group] = !(expandedGroups[group] ?: true)
+                                    }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = group.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = if (expandedGroups[group] == true) 
+                                        Icons.Filled.KeyboardArrowUp 
+                                    else 
+                                        Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = if (expandedGroups[group] == true) "收起" else "展开",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            
+                            AnimatedVisibility(
+                                visible = expandedGroups[group] == true,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    groupModels.forEach { model ->
+                                        ModelItem(
+                                            model = model,
+                                            isSelected = model.id == dashScopeConfigManager.selectedModelId,
+                                            onSelect = { dashScopeConfigManager.setSelectedModel(model.id) },
+                                            onEdit = {
+                                                editingModel = model
+                                                showEditDialog = true
+                                            },
+                                            onDelete = { dashScopeConfigManager.removeModel(model.id) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -413,6 +732,24 @@ private fun ModelItem(
                         else
                             MaterialTheme.colorScheme.onSurface
                     )
+                    
+                    Surface(
+                        color = if (isSelected) 
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
+                        else 
+                            MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = model.group.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                            color = if (isSelected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
 
                 if (model.description.isNotEmpty()) {
@@ -468,13 +805,15 @@ private fun AddModelDialog(
 ) {
     var modelName by remember { mutableStateOf("") }
     var modelDescription by remember { mutableStateOf("") }
+    var selectedGroup by remember { mutableStateOf(com.glassous.openqwens.ui.theme.ModelGroup.TEXT) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("添加模型") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
                     value = modelName,
@@ -491,6 +830,28 @@ private fun AddModelDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("模型分组", style = MaterialTheme.typography.bodyMedium)
+                    com.glassous.openqwens.ui.theme.ModelGroup.values().forEach { group ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedGroup = group }
+                        ) {
+                            RadioButton(
+                                selected = (selectedGroup == group),
+                                onClick = { selectedGroup = group }
+                            )
+                            Text(
+                                text = group.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -501,7 +862,8 @@ private fun AddModelDialog(
                             DashScopeModel(
                                 id = modelName.trim(),
                                 name = modelName.trim(),
-                                description = modelDescription.trim()
+                                description = modelDescription.trim(),
+                                group = selectedGroup
                             )
                         )
                     }
@@ -527,13 +889,15 @@ private fun EditModelDialog(
 ) {
     var modelName by remember { mutableStateOf(model.name) }
     var modelDescription by remember { mutableStateOf(model.description) }
+    var selectedGroup by remember { mutableStateOf(model.group) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("编辑模型") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
                     value = modelName,
@@ -550,6 +914,28 @@ private fun EditModelDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("模型分组", style = MaterialTheme.typography.bodyMedium)
+                    com.glassous.openqwens.ui.theme.ModelGroup.values().forEach { group ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedGroup = group }
+                        ) {
+                            RadioButton(
+                                selected = (selectedGroup == group),
+                                onClick = { selectedGroup = group }
+                            )
+                            Text(
+                                text = group.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -559,7 +945,8 @@ private fun EditModelDialog(
                         onConfirm(
                             model.copy(
                                 name = modelName.trim(),
-                                description = modelDescription.trim()
+                                description = modelDescription.trim(),
+                                group = selectedGroup
                             )
                         )
                     }

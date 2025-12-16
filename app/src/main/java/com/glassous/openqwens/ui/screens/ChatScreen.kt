@@ -62,6 +62,9 @@ import coil.request.ImageRequest
 import com.glassous.openqwens.utils.ImageUtils
 import com.glassous.openqwens.ui.components.ImagePreviewDialog
 import com.glassous.openqwens.ui.components.ModelSelectionBottomSheet
+import com.glassous.openqwens.ui.theme.ModelGroup
+
+import com.glassous.openqwens.ui.components.GenerationSettingsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,14 +105,31 @@ fun ChatScreen(
     val isStreaming by viewModel.isStreaming.collectAsState()
     val streamingContent by viewModel.streamingContent.collectAsState()
     
+    // 生成参数状态
+    val imageGenerationParams by viewModel.imageGenerationParams.collectAsState()
+    val videoGenerationParams by viewModel.videoGenerationParams.collectAsState()
+    
     val listState = rememberLazyListState()
     
     // Bottom Sheet 状态
     var showAttachmentBottomSheet by remember { mutableStateOf(false) }
     var showModelBottomSheet by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     
     // 选中的功能列表状态
     var selectedFunctions by remember { mutableStateOf(listOf<SelectedFunction>()) }
+    
+    // 监听功能选择变化，自动切换模型分组
+    LaunchedEffect(selectedFunctions) {
+        val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
+        val hasVideoGen = selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id }
+        
+        when {
+            hasVideoGen -> dashScopeConfigManager.switchToModelGroup(ModelGroup.VIDEO)
+            hasImageGen -> dashScopeConfigManager.switchToModelGroup(ModelGroup.IMAGE)
+            else -> dashScopeConfigManager.switchToModelGroup(ModelGroup.TEXT)
+        }
+    }
     
     // 选中的附件列表状态
     var selectedAttachments by remember { mutableStateOf(listOf<AttachmentData>()) }
@@ -230,6 +250,7 @@ fun ChatScreen(
                     FunctionType.DEEP_THINKING -> Icons.Default.Psychology
                     FunctionType.WEB_SEARCH -> Icons.Default.Search
                     FunctionType.IMAGE_GENERATION -> Icons.Default.Palette
+                    FunctionType.VIDEO_GENERATION -> Icons.Default.PlayArrow
                     FunctionType.IMAGE_EDITING -> Icons.Default.Edit
                     FunctionType.VISION_UNDERSTANDING -> Icons.Default.Visibility
                     FunctionType.CAMERA -> Icons.Default.CameraAlt
@@ -346,11 +367,16 @@ fun ChatScreen(
                         .fillMaxWidth()
                 ) {
                     // 混合卡片列表（附件和功能卡片在同一行）
+                    val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
+                    val hasVideoGen = selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id }
+                    
                     MixedCardList(
                         selectedAttachments = selectedAttachments,
                         selectedFunctions = selectedFunctions,
                         onRemoveAttachment = handleAttachmentRemoved,
                         onRemoveFunction = handleFunctionRemoved,
+                        showSettings = hasImageGen || hasVideoGen,
+                        onSettingsClick = { showSettingsDialog = true },
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                             .background(Color.Transparent) // 强制透明背景
@@ -444,9 +470,18 @@ fun ChatScreen(
     
     // 显示模型选择 Bottom Sheet
     if (showModelBottomSheet) {
+        val requiredGroup = remember(selectedFunctions) {
+            when {
+                selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id } -> ModelGroup.VIDEO
+                selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id } -> ModelGroup.IMAGE
+                else -> ModelGroup.TEXT
+            }
+        }
+
         ModelSelectionBottomSheet(
             onDismiss = { showModelBottomSheet = false },
-            dashScopeConfigManager = dashScopeConfigManager
+            dashScopeConfigManager = dashScopeConfigManager,
+            requiredGroup = requiredGroup
         )
     }
     
@@ -460,6 +495,22 @@ fun ChatScreen(
             onSaveImage = { imagePath ->
                 // 这里可以添加保存图片的逻辑，目前暂时不处理
             }
+        )
+    }
+
+    // 生成参数设置对话框
+    if (showSettingsDialog) {
+        val hasImageGen = selectedFunctions.any { it.id == FunctionType.IMAGE_GENERATION.id || it.id == FunctionType.IMAGE_EDITING.id }
+        val hasVideoGen = selectedFunctions.any { it.id == FunctionType.VIDEO_GENERATION.id }
+        
+        GenerationSettingsDialog(
+            isImageGeneration = hasImageGen,
+            isVideoGeneration = hasVideoGen,
+            imageParams = imageGenerationParams,
+            videoParams = videoGenerationParams,
+            onImageParamsChange = { viewModel.updateImageGenerationParams(it) },
+            onVideoParamsChange = { viewModel.updateVideoGenerationParams(it) },
+            onDismiss = { showSettingsDialog = false }
         )
     }
 }

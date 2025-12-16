@@ -49,8 +49,12 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -113,10 +117,12 @@ fun SettingsScreen(
     dashScopeConfigManager: DashScopeConfigManager,
     onBackClick: () -> Unit
 ) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = {
                     Text(
                         text = "设置",
@@ -131,7 +137,8 @@ fun SettingsScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
@@ -142,67 +149,39 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 8.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             // 主题模式设置
-            ThemeModeSection(themeManager = themeManager)
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+                ThemeModeSection(themeManager = themeManager)
+            }
             
             // 阿里云百炼模型配置入口
             val context = LocalContext.current
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "阿里云百炼模型配置",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Text(
-                            text = "管理基础URL、API密钥与模型列表",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+            ListItem(
+                headlineContent = { Text("阿里云百炼模型配置") },
+                supportingContent = { Text("管理基础URL、API密钥与模型列表") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier
+                    .clickable {
+                        val intent = Intent(context, DashScopeConfigActivity::class.java)
+                        context.startActivity(intent)
+                        (context as? Activity)?.overridePendingTransition(
+                            com.glassous.openqwens.R.anim.slide_in_right,
+                            com.glassous.openqwens.R.anim.slide_out_left
                         )
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent(context, DashScopeConfigActivity::class.java)
-                            context.startActivity(intent)
-                            (context as? Activity)?.overridePendingTransition(
-                                R.anim.slide_in_right,
-                                R.anim.slide_out_left
-                            )
-                        },
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-                    ) {
-                        Text(text = "打开配置", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
+                    },
+                colors = ListItemDefaults.colors(
+                    containerColor = Color.Transparent
+                )
+            )
          }
     }
 }

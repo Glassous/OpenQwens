@@ -8,6 +8,9 @@ import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -208,6 +211,27 @@ fun ChatMessageItem(
                                 }
                             }
                         }
+                        
+                        // 显示视频（如果有）
+                        if (!message.videoUrl.isNullOrBlank()) {
+                            if (message.content.isNotBlank() || (message.attachments?.isNotEmpty() == true) || message.imageUrls.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            
+                            VideoPlayerCard(
+                                videoUrl = message.videoUrl!!,
+                                onPlay = {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW)
+                                        intent.setDataAndType(android.net.Uri.parse(message.videoUrl), "video/*")
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        onShowSnackbar("无法播放视频")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             } else {
@@ -311,6 +335,27 @@ fun ChatMessageItem(
                             }
                         }
                     }
+                    
+                    // 显示视频（如果有）
+                    if (!message.videoUrl.isNullOrBlank()) {
+                        if (message.content.isNotBlank() || (message.attachments?.isNotEmpty() == true) || message.imageUrls.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        
+                        VideoPlayerCard(
+                            videoUrl = message.videoUrl!!,
+                            onPlay = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setDataAndType(android.net.Uri.parse(message.videoUrl), "video/*")
+                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    onShowSnackbar("无法播放视频")
+                                }
+                            }
+                        )
+                    }
                 }
             }
             // 删除时间戳显示
@@ -324,4 +369,45 @@ fun ChatMessageItem(
         onCopy = copyToClipboard,
         onViewDetails = { navigateToDetail() }
     )
+}
+
+@Composable
+fun VideoPlayerCard(
+    videoUrl: String,
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .size(200.dp, 150.dp)
+            .clickable(onClick = onPlay),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // 背景（可以是缩略图，这里暂时用纯色+图标）
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayCircle,
+                    contentDescription = "播放视频",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "点击播放视频",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }

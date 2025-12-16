@@ -28,6 +28,7 @@ data class AttachmentData(
     val mimeType: String,
     val attachmentType: AttachmentType,
     val base64Content: String,
+    val uri: String? = null,
     @Transient val icon: ImageVector? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) {

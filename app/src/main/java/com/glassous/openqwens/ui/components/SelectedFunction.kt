@@ -23,6 +23,7 @@ enum class FunctionType(
     DEEP_THINKING("deep_thinking", "深度思考", "启用深度推理模式"),
     WEB_SEARCH("web_search", "联网搜索", "搜索最新信息"),
     IMAGE_GENERATION("image_generation", "图片生成", "AI生成图片"),
+    VIDEO_GENERATION("video_generation", "视频生成", "AI生成视频"),
     IMAGE_EDITING("image_editing", "图片编辑", "编辑和修改图片"),
     VISION_UNDERSTANDING("vision_understanding", "视觉理解", "分析和理解图片内容"),
     

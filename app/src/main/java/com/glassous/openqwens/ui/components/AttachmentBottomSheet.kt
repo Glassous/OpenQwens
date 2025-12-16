@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -281,6 +282,16 @@ fun FunctionMenuContent(
                 onClick = { onFunctionSelected(FunctionType.IMAGE_GENERATION) },
                 enabled = !FunctionExclusionManager.shouldBeDisabled(
                     FunctionType.IMAGE_GENERATION, selectedFunctions, selectedAttachments
+                )
+            )
+            
+            AttachmentOptionRow(
+                icon = Icons.Default.PlayArrow,
+                title = "视频生成",
+                description = "AI生成视频",
+                onClick = { onFunctionSelected(FunctionType.VIDEO_GENERATION) },
+                enabled = !FunctionExclusionManager.shouldBeDisabled(
+                    FunctionType.VIDEO_GENERATION, selectedFunctions, selectedAttachments
                 )
             )
             

@@ -8,6 +8,7 @@ import com.glassous.openqwens.data.ChatMessage
 import com.glassous.openqwens.data.ChatRepository
 import com.glassous.openqwens.data.ChatSession
 import com.glassous.openqwens.network.ImageGenerationService
+import com.glassous.openqwens.network.VideoGenerationService
 import com.glassous.openqwens.network.DeepThinkingService
 import com.glassous.openqwens.network.WebSearchService
 import com.glassous.openqwens.network.VisionUnderstandingService
@@ -26,6 +27,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val chatApi = DashScopeApi(configManager)
     private val imageDownloadManager = ImageDownloadManager(application)
     private val imageGenerationService = ImageGenerationService(configManager, imageDownloadManager)
+    private val videoGenerationService = VideoGenerationService(configManager)
     private val deepThinkingService = DeepThinkingService(configManager)
     private val webSearchService = WebSearchService(configManager)
     private val visionUnderstandingService = VisionUnderstandingService(configManager)
@@ -47,6 +49,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _streamingContent = MutableStateFlow("")
     val streamingContent: StateFlow<String> = _streamingContent.asStateFlow()
     
+    // 生成参数状态
+    private val _imageGenerationParams = MutableStateFlow(com.glassous.openqwens.data.ImageGenerationParams())
+    val imageGenerationParams: StateFlow<com.glassous.openqwens.data.ImageGenerationParams> = _imageGenerationParams.asStateFlow()
+    
+    private val _videoGenerationParams = MutableStateFlow(com.glassous.openqwens.data.VideoGenerationParams())
+    val videoGenerationParams: StateFlow<com.glassous.openqwens.data.VideoGenerationParams> = _videoGenerationParams.asStateFlow()
+
     init {
         // 加载保存的聊天记录
         loadSavedSessions()
@@ -72,6 +81,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // 清空主页，不立即创建新对话
         _currentSession.value = null
     }
+
+    fun updateImageGenerationParams(params: com.glassous.openqwens.data.ImageGenerationParams) {
+        _imageGenerationParams.value = params
+    }
+
+    fun updateVideoGenerationParams(params: com.glassous.openqwens.data.VideoGenerationParams) {
+        _videoGenerationParams.value = params
+    }
     
     fun sendMessage(content: String, selectedFunctions: List<SelectedFunction> = emptyList(), selectedAttachments: List<AttachmentData> = emptyList()) {
         // 如果当前没有会话，创建一个临时会话用于显示对话
@@ -93,6 +110,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         
         // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        val hasVideoGeneration = selectedFunctions.any { it.id == "video_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
         val hasVisionUnderstanding = selectedFunctions.any { it.id == "vision_understanding" } || 
@@ -103,12 +121,35 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val response = if (hasImageGeneration) {
                     // 使用图片生成服务
-                    val imageResult = imageGenerationService.generateImageForChat(userMessage, content)
+                    val imageResult = imageGenerationService.generateImageForChat(
+                        userMessage, 
+                        content,
+                        _imageGenerationParams.value
+                    )
                     if (imageResult.isSuccess) {
                         imageResult.getOrThrow()
                     } else {
                         ChatMessage(
                             content = "抱歉，图片生成失败，请稍后重试。",
+                            isFromUser = false
+                        )
+                    }
+                } else if (hasVideoGeneration) {
+                    // 使用视频生成服务
+                    // 检查是否有图片附件用于图生视频
+                    val inputImage = selectedAttachments.find { it.mimeType.startsWith("image/") }
+                    val videoResult = videoGenerationService.generateVideoForChat(
+                        userMessage, 
+                        content,
+                        inputImage?.uri?.toString(),
+                        _videoGenerationParams.value
+                    )
+                    
+                    if (videoResult.isSuccess) {
+                        videoResult.getOrThrow()
+                    } else {
+                        ChatMessage(
+                            content = "抱歉，视频生成失败，请稍后重试。",
                             isFromUser = false
                         )
                     }
@@ -236,13 +277,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         
         // 检查是否选择了图片生成功能、深度思考功能、联网搜索功能或视觉理解功能
         val hasImageGeneration = selectedFunctions.any { it.id == "image_generation" }
+        val hasVideoGeneration = selectedFunctions.any { it.id == "video_generation" }
         val hasDeepThinking = selectedFunctions.any { it.id == "deep_thinking" }
         val hasWebSearch = selectedFunctions.any { it.id == "web_search" }
         val hasVisionUnderstanding = selectedFunctions.any { it.id == "vision_understanding" } || 
                                    visionUnderstandingService.shouldEnableVisionUnderstanding(selectedAttachments, selectedFunctions)
         
-        if (hasImageGeneration || hasDeepThinking) {
-            // 图片生成和深度思考不支持流式输出，使用普通发送方法
+        if (hasImageGeneration || hasVideoGeneration || hasDeepThinking) {
+            // 图片/视频生成和深度思考不支持流式输出，使用普通发送方法
             sendMessage(content, selectedFunctions, selectedAttachments)
             return
         }

@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
 
+import com.glassous.openqwens.data.ImageGenerationParams
+
 class ImageGenerationService(
     private val configManager: DashScopeConfigManager,
     private val imageDownloadManager: ImageDownloadManager
@@ -22,7 +24,7 @@ class ImageGenerationService(
         // 阿里云百炼API配置
         private const val BASE_URL = "https://dashscope.aliyuncs.com/api/v1"
         private const val MODEL_NAME = "qwen-image-plus"
-        private const val DEFAULT_SIZE = "1328*1328"
+        // private const val DEFAULT_SIZE = "1328*1328" // Deprecated, using params
         
         init {
             // 设置基础URL
@@ -33,13 +35,13 @@ class ImageGenerationService(
     /**
      * 生成图片
      * @param prompt 图片描述提示词
-     * @param size 图片尺寸，默认为1328*1328
+     * @param params 图片生成参数
      * @param count 生成图片数量，默认为1
      * @return 生成的图片URL列表
      */
     suspend fun generateImage(
         prompt: String,
-        size: String = DEFAULT_SIZE,
+        params: ImageGenerationParams,
         count: Int = 1
     ): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
@@ -54,14 +56,19 @@ class ImageGenerationService(
                 "watermark" to true       // 添加水印
             )
             
-            val param = ImageSynthesisParam.builder()
+            val paramBuilder = ImageSynthesisParam.builder()
                 .apiKey(apiKey)
                 .model(configManager.getSelectedModel()?.id ?: MODEL_NAME)
                 .prompt(prompt)
                 .n(count)
-                .size(size)
+                .size(params.resolution)
                 .parameters(parameters)
-                .build()
+                
+            if (params.style != "<auto>") {
+                paramBuilder.style(params.style)
+            }
+                
+            val param = paramBuilder.build()
             
             // 调用API
             val imageSynthesis = ImageSynthesis()
@@ -94,14 +101,16 @@ class ImageGenerationService(
      * 为聊天消息生成图片
      * @param userMessage 用户的消息
      * @param prompt 图片生成提示词
+     * @param params 图片生成参数
      * @return 包含生成图片的助手回复消息
      */
     suspend fun generateImageForChat(
         userMessage: ChatMessage,
-        prompt: String
+        prompt: String,
+        params: ImageGenerationParams
     ): Result<ChatMessage> {
         return try {
-            val imageResult = generateImage(prompt)
+            val imageResult = generateImage(prompt, params)
             
             if (imageResult.isSuccess) {
                 val imageUrls = imageResult.getOrNull() ?: emptyList()

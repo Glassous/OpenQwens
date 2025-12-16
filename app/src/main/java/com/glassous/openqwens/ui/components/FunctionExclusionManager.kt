@@ -19,32 +19,44 @@ object FunctionExclusionManager {
                 FunctionType.IMAGE_GENERATION
             )
             
-            // 2. 选择深度思考后，禁用联网搜索，图片生成，图片编辑
+            // 2. 选择深度思考后，禁用联网搜索，图片生成，图片编辑，视频生成
             FunctionType.DEEP_THINKING -> setOf(
                 FunctionType.WEB_SEARCH,
                 FunctionType.IMAGE_GENERATION,
-                FunctionType.IMAGE_EDITING
+                FunctionType.IMAGE_EDITING,
+                FunctionType.VIDEO_GENERATION
             )
             
-            // 3. 选择联网搜索后，禁用全部，包括联网搜索
+            // 3. 选择联网搜索后，禁用全部
             FunctionType.WEB_SEARCH -> FunctionType.values().toSet()
             
-            // 4. 选择图片生成后，禁用全部，包括图片生成
+            // 4. 选择图片生成后，禁用全部
             FunctionType.IMAGE_GENERATION -> FunctionType.values().toSet()
             
-            // 5. 选择图片编辑后，禁用深度思考，联网搜索，图片生成，图片编辑
+            // 5. 选择图片编辑后，禁用深度思考，联网搜索，图片生成，图片编辑，视频生成
             FunctionType.IMAGE_EDITING -> setOf(
                 FunctionType.DEEP_THINKING,
                 FunctionType.WEB_SEARCH,
                 FunctionType.IMAGE_GENERATION,
-                FunctionType.IMAGE_EDITING
+                FunctionType.IMAGE_EDITING,
+                FunctionType.VIDEO_GENERATION
             )
             
-            // 6. 选择视觉理解后，禁用联网搜索，图片生成，图片编辑
+            // 6. 选择视觉理解后，禁用联网搜索，图片生成，图片编辑，视频生成
             FunctionType.VISION_UNDERSTANDING -> setOf(
                 FunctionType.WEB_SEARCH,
                 FunctionType.IMAGE_GENERATION,
-                FunctionType.IMAGE_EDITING
+                FunctionType.IMAGE_EDITING,
+                FunctionType.VIDEO_GENERATION
+            )
+            
+            // 7. 选择视频生成后，禁用深度思考，联网搜索，图片生成，图片编辑，视觉理解
+            FunctionType.VIDEO_GENERATION -> setOf(
+                FunctionType.DEEP_THINKING,
+                FunctionType.WEB_SEARCH,
+                FunctionType.IMAGE_GENERATION,
+                FunctionType.IMAGE_EDITING,
+                FunctionType.VISION_UNDERSTANDING
             )
         }
     }

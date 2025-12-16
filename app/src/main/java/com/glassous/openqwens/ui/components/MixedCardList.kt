@@ -9,6 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+
 /**
  * 混合卡片列表组件 - 将附件卡片和功能卡片合并到同一行显示
  * 采用横向滚动布局，统一的卡片样式，强制完全透明的背景
@@ -19,6 +23,8 @@ fun MixedCardList(
     selectedFunctions: List<SelectedFunction>,
     onRemoveAttachment: (AttachmentData) -> Unit,
     onRemoveFunction: (SelectedFunction) -> Unit,
+    showSettings: Boolean = false,
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // 只有当有附件或功能时才显示
@@ -38,6 +44,34 @@ fun MixedCardList(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
+                // 显示设置卡片（如果在最左侧）
+                if (showSettings) {
+                    item {
+                        Surface(
+                            onClick = onSettingsClick,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "参数设置",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "参数设置",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // 先显示附件卡片
                 items(selectedAttachments) { attachment ->
                     AttachmentCard(

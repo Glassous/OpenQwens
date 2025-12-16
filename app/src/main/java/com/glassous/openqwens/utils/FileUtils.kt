@@ -71,6 +71,7 @@ object FileUtils {
                 mimeType = mimeType,
                 attachmentType = attachmentType,
                 base64Content = base64Content,
+                uri = uri.toString(),
                 icon = icon
             )
         } catch (e: Exception) {
