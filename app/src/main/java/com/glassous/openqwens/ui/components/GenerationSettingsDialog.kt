@@ -60,30 +60,24 @@ fun GenerationSettingsDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ImageGenerationParams.RESOLUTIONS.take(2).forEach { res ->
-                        FilterChip(
-                            selected = imageParams.resolution == res,
-                            onClick = { onImageParamsChange(imageParams.copy(resolution = res)) },
-                            label = { Text(res) }
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ImageGenerationParams.RESOLUTIONS.chunked(2).forEach { rowResolutions ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowResolutions.forEach { res ->
+                                FilterChip(
+                                    selected = imageParams.resolution == res,
+                                    onClick = { onImageParamsChange(imageParams.copy(resolution = res)) },
+                                    label = { Text(res) }
+                                )
+                            }
+                        }
                     }
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ImageGenerationParams.RESOLUTIONS.drop(2).forEach { res ->
-                        FilterChip(
-                            selected = imageParams.resolution == res,
-                            onClick = { onImageParamsChange(imageParams.copy(resolution = res)) },
-                            label = { Text(res) }
-                        )
-                    }
-                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // 图片风格
                 Text(

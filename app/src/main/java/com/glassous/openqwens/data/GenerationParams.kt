@@ -12,7 +12,9 @@ data class ImageGenerationParams(
             "1024*1024",
             "1280*720",
             "720*1280",
-            "1024*1024"
+            "1024*768",
+            "768*1024",
+            "512*512"
         ).distinct()
 
         val STYLES = listOf(
@@ -39,12 +41,14 @@ data class VideoGenerationParams(
 ) {
     companion object {
         val RESOLUTIONS = listOf(
+            "1080P",
             "720P",
-            "480P" // Lower quality option if needed, though Wanx usually defaults to 720P
+            "480P"
         )
         
         val DURATIONS = listOf(
-            5
+            5,
+            10
         )
     }
 }
