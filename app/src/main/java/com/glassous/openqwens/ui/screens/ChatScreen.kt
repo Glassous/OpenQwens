@@ -312,6 +312,9 @@ fun ChatScreen(
                 },
                 onRenameSession = { sessionId, newTitle ->
                     viewModel.renameSession(sessionId, newTitle)
+                },
+                onCloseDrawer = {
+                    scope.launch { drawerState.close() }
                 }
             )
         }
@@ -525,7 +528,8 @@ fun NavigationDrawerContent(
     onNewChat: () -> Unit,
     onSelectSession: (ChatSession) -> Unit,
     onDeleteSession: (String) -> Unit,
-    onRenameSession: (String, String) -> Unit
+    onRenameSession: (String, String) -> Unit,
+    onCloseDrawer: () -> Unit = {}
 ) {
     var showDeleteDialog by remember { mutableStateOf<ChatSession?>(null) }
     var showRenameDialog by remember { mutableStateOf<ChatSession?>(null) }
@@ -534,7 +538,9 @@ fun NavigationDrawerContent(
     // 获取所有生成的内容（图片和视频）
     val generatedMedia = remember { MediaUtils.getGeneratedMedia(context) }
     
-    ModalDrawerSheet {
+    ModalDrawerSheet(
+        windowInsets = WindowInsets.statusBars
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
@@ -588,7 +594,7 @@ fun NavigationDrawerContent(
             // HorizontalDivider()
             
             // 减小间距
-            Spacer(modifier = Modifier.height(8.dp))
+            // Spacer(modifier = Modifier.height(8.dp))
             
             // MD3 Carousel 组件 - 显示生成的内容
             if (generatedMedia.isNotEmpty()) {
@@ -681,7 +687,12 @@ fun NavigationDrawerContent(
             // 聊天会话列表 - 使用weight让它占据剩余空间
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 12.dp)
+                contentPadding = PaddingValues(
+                    start = 12.dp, 
+                    end = 12.dp, 
+                    // 增加底部Padding，确保内容不被导航栏遮挡，实现沉浸式效果
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+                )
             ) {
                 items(chatSessions) { session ->
                     ChatSessionItem(
@@ -689,7 +700,8 @@ fun NavigationDrawerContent(
                         isSelected = currentSession?.id == session.id,
                         onClick = { onSelectSession(session) },
                         onDelete = { showDeleteDialog = session },
-                        onRename = { showRenameDialog = session }
+                        onRename = { showRenameDialog = session },
+                        onSwipeToClose = onCloseDrawer
                     )
                 }
             }
