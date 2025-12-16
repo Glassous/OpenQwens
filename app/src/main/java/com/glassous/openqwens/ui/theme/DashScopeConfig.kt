@@ -36,7 +36,8 @@ data class DashScopeModel(
     val id: String,
     val name: String,
     val description: String = "",
-    val group: ModelGroup = ModelGroup.TEXT
+    val group: ModelGroup = ModelGroup.TEXT,
+    val note: String = ""
 )
 
 /**

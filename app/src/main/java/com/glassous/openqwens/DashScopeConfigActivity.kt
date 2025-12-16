@@ -70,6 +70,15 @@ import com.glassous.openqwens.ui.theme.OpenQwensTheme
 import com.glassous.openqwens.ui.theme.rememberDashScopeConfigManager
 import com.glassous.openqwens.ui.theme.rememberThemeManager
 
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+
 class DashScopeConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,15 +123,25 @@ fun DashScopeConfigScreen(
     dashScopeConfigManager: DashScopeConfigManager,
     onBackClick: () -> Unit
 ) {
+    var showTutorialDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("阿里云百炼模型配置", fontWeight = FontWeight.Medium) },
+                title = { Text("模型配置", fontWeight = FontWeight.Medium) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showTutorialDialog = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                            contentDescription = "教程"
                         )
                     }
                 },
@@ -143,8 +162,137 @@ fun DashScopeConfigScreen(
         ) {
             DashScopeConfigSection(dashScopeConfigManager = dashScopeConfigManager)
         }
+        
+        if (showTutorialDialog) {
+            TutorialDialog(onDismiss = { showTutorialDialog = false })
+        }
     }
 }
+
+@Composable
+@Suppress("DEPRECATION")
+private fun TutorialDialog(onDismiss: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("使用教程") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 1. 注册账号
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "1. 注册账号", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    val registerText = buildAnnotatedString {
+                        append("如果没有阿里云账号，您需要先")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://account.aliyun.com/register/qr_register.htm")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("注册阿里云账号")
+                        }
+                        pop()
+                        
+                        append("。")
+                    }
+                    ClickableText(
+                        text = registerText,
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                        onClick = { offset ->
+                            registerText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                        }
+                    )
+                }
+
+                // 2. 开通阿里云百炼
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "2. 开通阿里云百炼", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    val serviceText = buildAnnotatedString {
+                        append("使用阿里云主账号前往阿里云百炼大模型服务平台（")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://bailian.console.aliyun.com/?tab=model#/model-market")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("北京")
+                        }
+                        pop()
+                        
+                        append("或")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://modelstudio.console.aliyun.com/?tab=model#/model-market")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("新加坡")
+                        }
+                        pop()
+                        
+                        append("），阅读并同意协议后，将自动开通阿里云百炼，如果未弹出服务协议，则表示您已经开通。\n如果开通服务时提示“您尚未进行实名认证”，请先进行")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://help.aliyun.com/zh/account/verify-your-identity-individual-account")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("实名认证")
+                        }
+                        pop()
+                        
+                        append("。")
+                    }
+                    ClickableText(
+                        text = serviceText,
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                        onClick = { offset ->
+                            serviceText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                        }
+                    )
+                }
+
+                // 3. 获取API Key
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = "3. 获取API Key", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    val keyText = buildAnnotatedString {
+                        append("前往密钥管理（")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://bailian.console.aliyun.com/?tab=model#/api-key")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("北京")
+                        }
+                        pop()
+                        
+                        append("或")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://modelstudio.console.aliyun.com/?tab=model#/api-key")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("新加坡")
+                        }
+                        pop()
+                        
+                        append("）页面，单击创建API-KEY，即可通过API KEY调用大模型。\n创建新的API Key时，归属业务空间推荐选择主账号空间。使用子空间API Key需由主账号管理员为对应子空间开通模型授权（如本文使用通义千问-Plus模型），详情请参见")
+                        
+                        pushStringAnnotation(tag = "URL", annotation = "https://help.aliyun.com/zh/model-studio/use-workspace#f2e68d7ba7ubk")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                            append("授权子业务空间模型调用、训练和部署")
+                        }
+                        pop()
+                        
+                        append("。")
+                    }
+                    ClickableText(
+                        text = keyText,
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                        onClick = { offset ->
+                            keyText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                        }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("关闭") }
+        }
+    )
+}
+
 
 @Composable
 private fun DashScopeConfigSection(dashScopeConfigManager: DashScopeConfigManager) {
@@ -179,7 +327,7 @@ private fun BaseUrlConfigSection(dashScopeConfigManager: DashScopeConfigManager)
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "基础URL",
+                text = "Base URL",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
@@ -222,7 +370,7 @@ private fun ApiKeyConfigSection(dashScopeConfigManager: DashScopeConfigManager) 
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "API密钥管理",
+                text = "API Key",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
@@ -762,6 +910,17 @@ private fun ModelItem(
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                if (model.note.isNotEmpty()) {
+                    Text(
+                        text = "备注: ${model.note}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
             }
 
             Row(
@@ -805,6 +964,7 @@ private fun AddModelDialog(
 ) {
     var modelName by remember { mutableStateOf("") }
     var modelDescription by remember { mutableStateOf("") }
+    var modelNote by remember { mutableStateOf("") }
     var selectedGroup by remember { mutableStateOf(com.glassous.openqwens.ui.theme.ModelGroup.TEXT) }
 
     AlertDialog(
@@ -827,6 +987,14 @@ private fun AddModelDialog(
                     value = modelDescription,
                     onValueChange = { modelDescription = it },
                     label = { Text("模型描述（可选）") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+                
+                OutlinedTextField(
+                    value = modelNote,
+                    onValueChange = { modelNote = it },
+                    label = { Text("备注（可选）") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
@@ -863,7 +1031,8 @@ private fun AddModelDialog(
                                 id = modelName.trim(),
                                 name = modelName.trim(),
                                 description = modelDescription.trim(),
-                                group = selectedGroup
+                                group = selectedGroup,
+                                note = modelNote.trim()
                             )
                         )
                     }
@@ -889,6 +1058,7 @@ private fun EditModelDialog(
 ) {
     var modelName by remember { mutableStateOf(model.name) }
     var modelDescription by remember { mutableStateOf(model.description) }
+    var modelNote by remember { mutableStateOf(model.note) }
     var selectedGroup by remember { mutableStateOf(model.group) }
 
     AlertDialog(
@@ -911,6 +1081,14 @@ private fun EditModelDialog(
                     value = modelDescription,
                     onValueChange = { modelDescription = it },
                     label = { Text("模型描述（可选）") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+                
+                OutlinedTextField(
+                    value = modelNote,
+                    onValueChange = { modelNote = it },
+                    label = { Text("备注（可选）") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
@@ -946,7 +1124,8 @@ private fun EditModelDialog(
                             model.copy(
                                 name = modelName.trim(),
                                 description = modelDescription.trim(),
-                                group = selectedGroup
+                                group = selectedGroup,
+                                note = modelNote.trim()
                             )
                         )
                     }
