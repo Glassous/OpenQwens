@@ -29,12 +29,18 @@ import org.intellij.markdown.ast.getTextInNode
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import org.intellij.markdown.parser.MarkdownParser
 
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+
 @Composable
 fun MarkdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    style: TextStyle = MaterialTheme.typography.bodyMedium
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+    linkColor: Color = Color.Blue,
+    referenceUrls: Map<Int, String> = emptyMap()
 ) {
     val uriHandler = LocalUriHandler.current
     
@@ -45,8 +51,10 @@ fun MarkdownText(
     val flavour = GFMFlavourDescriptor()
     val parsedTree = MarkdownParser(flavour).buildMarkdownTreeFromString(processedMarkdown)
     
+    val inlineContent = remember { mutableMapOf<String, InlineTextContent>() }
+
     Column(modifier = modifier) {
-        processMarkdownElements(parsedTree, processedMarkdown, color, style, uriHandler)
+        processMarkdownElements(parsedTree, processedMarkdown, color, style, uriHandler, linkColor, referenceUrls, inlineContent)
         
         // 渲染脚注
         MarkdownFootnotes(footnotes, color, style)
@@ -59,8 +67,12 @@ private fun processMarkdownElements(
     markdown: String,
     baseColor: Color,
     baseStyle: TextStyle,
-    uriHandler: androidx.compose.ui.platform.UriHandler
+    uriHandler: androidx.compose.ui.platform.UriHandler,
+    linkColor: Color,
+    referenceUrls: Map<Int, String>,
+    inlineContent: MutableMap<String, InlineTextContent>
 ) {
+    val citationColor = MaterialTheme.colorScheme.primary
     node.children.forEach { child ->
         when (child.type) {
             MarkdownElementTypes.PARAGRAPH -> {
@@ -71,20 +83,13 @@ private fun processMarkdownElements(
                     MarkdownTable(paragraphText, baseColor, baseStyle)
                 } else {
                     val annotatedString = buildAnnotatedString {
-                        processInlineMarkdown(child, markdown, this, baseColor, baseStyle)
+                        processInlineMarkdown(child, markdown, this, baseColor, baseStyle, linkColor, citationColor, referenceUrls, inlineContent)
                     }
-                    ClickableText(
+                    MarkdownParagraph(
                         text = annotatedString,
                         style = baseStyle.copy(color = baseColor),
-                        onClick = { offset ->
-                            annotatedString.getStringAnnotations(
-                                tag = "URL",
-                                start = offset,
-                                end = offset
-                            ).firstOrNull()?.let { annotation ->
-                                uriHandler.openUri(annotation.item)
-                            }
-                        }
+                        inlineContent = inlineContent,
+                        onUrlClick = { url -> uriHandler.openUri(url) }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -113,7 +118,7 @@ private fun processMarkdownElements(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler)
+                            processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
                         }
                     }
                 }
@@ -162,7 +167,7 @@ private fun processMarkdownElements(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
-                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler)
+                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
                             }
                         }
                     }
@@ -184,7 +189,7 @@ private fun processMarkdownElements(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
-                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler)
+                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
                             }
                         }
                         itemNumber++
@@ -205,23 +210,51 @@ private fun processMarkdownElements(
                 }
                 
                 val annotatedString = buildAnnotatedString {
-                    processInlineMarkdown(child, markdown, this, baseColor, baseStyle)
+                    processInlineMarkdown(child, markdown, this, baseColor, baseStyle, linkColor, citationColor, referenceUrls, inlineContent)
                 }
                 
-                Text(
+                MarkdownParagraph(
                     text = annotatedString,
                     style = baseStyle.copy(
                         fontSize = fontSize,
                         fontWeight = FontWeight.Bold,
                         color = baseColor
-                    )
+                    ),
+                    inlineContent = inlineContent,
+                    onUrlClick = { url -> uriHandler.openUri(url) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
             
             else -> {
-                processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler)
+                processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
             }
         }
     }
+}
+
+@Composable
+fun MarkdownParagraph(
+    text: AnnotatedString,
+    style: TextStyle,
+    inlineContent: Map<String, InlineTextContent>,
+    onUrlClick: (String) -> Unit
+) {
+    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+    
+    Text(
+        text = text,
+        modifier = Modifier.pointerInput(onUrlClick) {
+            detectTapGestures { pos ->
+                layoutResult.value?.let { layout ->
+                    val offset = layout.getOffsetForPosition(pos)
+                    text.getStringAnnotations("URL", offset, offset)
+                        .firstOrNull()?.let { onUrlClick(it.item) }
+                }
+            }
+        },
+        style = style,
+        inlineContent = inlineContent,
+        onTextLayout = { layoutResult.value = it }
+    )
 }

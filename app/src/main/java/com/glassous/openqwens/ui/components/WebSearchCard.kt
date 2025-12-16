@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +32,8 @@ fun WebSearchCard(
         // 搜索来源部分 - 可折叠
         if (searchResults.isNotBlank()) {
             ExpandableSection(
-                title = "🔍 搜索来源",
+                title = "搜索来源",
+                icon = Icons.Default.Search,
                 content = searchResults,
                 initiallyExpanded = false
             )
@@ -43,10 +45,15 @@ fun WebSearchCard(
         
         // 回复内容部分 - 直接显示，无需卡片包装
         if (replyContent.isNotBlank()) {
+            // 预处理内容，将 [ref_n] 格式转换为 SEARCHREFn 格式，确保不被 Markdown 解析器拆分
+            // 且移除所有与 ^n 相关的处理，只关注 [ref_n]
+            val processedContent = replyContent.replace(Regex("\\[ref_(\\d+)\\]"), "SEARCHREF$1")
+            
             MarkdownText(
-                markdown = replyContent,
+                markdown = processedContent,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                referenceUrls = extractReferenceUrls(searchResults)
             )
         }
     }
@@ -59,6 +66,7 @@ fun WebSearchCard(
 @Composable
 private fun ExpandableSection(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     content: String,
     initiallyExpanded: Boolean = false
 ) {
@@ -93,12 +101,24 @@ private fun ExpandableSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
@@ -122,12 +142,36 @@ private fun ExpandableSection(
                     MarkdownText(
                         markdown = content,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        linkColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) // 链接使用普通颜色
                     )
                 }
             }
         }
     }
+}
+
+/**
+ * 提取搜索结果中的引用链接
+ * 假设格式为：[n] Title: URL 或 n. Title: URL
+ */
+private fun extractReferenceUrls(content: String): Map<Int, String> {
+    val urls = mutableMapOf<Int, String>()
+    // 匹配 [n] ... http... 或 n. ... http...
+    // 简化正则：查找数字后跟一些文本，然后是 http 链接
+    val regex = Regex("""(?:\[?(\d+)]?\.?)\s+.*?(https?://\S+)""")
+    
+    regex.findAll(content).forEach { matchResult ->
+        try {
+            val index = matchResult.groupValues[1].toInt()
+            val url = matchResult.groupValues[2]
+            urls[index] = url
+        } catch (e: Exception) {
+            // 忽略解析错误
+        }
+    }
+    
+    return urls
 }
 
 /**
