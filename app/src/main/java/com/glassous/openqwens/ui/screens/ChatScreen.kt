@@ -78,7 +78,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
+    onHtmlPreviewClick: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -459,6 +460,7 @@ fun ChatScreen(
                             items(messages) { message ->
                                 ChatMessageItem(
                                     message = message,
+                                    onHtmlPreviewClick = onHtmlPreviewClick,
                                     onShowSnackbar = { text ->
                                         scope.launch {
                                             snackbarHostState.showSnackbar(text)

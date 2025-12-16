@@ -9,10 +9,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.glassous.openqwens.ui.screens.ChatScreen
+import com.glassous.openqwens.ui.screens.HtmlPreviewScreen
 import com.glassous.openqwens.ui.theme.OpenQwensTheme
 import com.glassous.openqwens.ui.theme.rememberThemeManager
 import com.glassous.openqwens.viewmodel.ChatViewModel
+import com.glassous.openqwens.viewmodel.HtmlContentHolder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,8 +32,25 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    val navController = rememberNavController()
                     val viewModel: ChatViewModel = viewModel()
-                    ChatScreen(viewModel = viewModel)
+                    
+                    NavHost(navController = navController, startDestination = "chat") {
+                        composable("chat") {
+                            ChatScreen(
+                                viewModel = viewModel,
+                                onHtmlPreviewClick = { html ->
+                                    HtmlContentHolder.content = html
+                                    navController.navigate("html_preview")
+                                }
+                            )
+                        }
+                        composable("html_preview") {
+                            HtmlPreviewScreen(
+                                onBackClick = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
             }
         }

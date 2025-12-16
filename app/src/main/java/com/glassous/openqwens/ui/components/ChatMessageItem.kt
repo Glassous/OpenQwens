@@ -44,6 +44,7 @@ fun ChatMessageItem(
     message: ChatMessage,
     onShowSnackbar: (String) -> Unit,
     onBackdropBlurChanged: (Boolean) -> Unit = {},
+    onHtmlPreviewClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -135,7 +136,8 @@ fun ChatMessageItem(
                                         } else {
                                             MaterialTheme.colorScheme.onSurfaceVariant
                                         },
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        onHtmlPreviewClick = onHtmlPreviewClick
                                     )
                                 }
                             } else {
@@ -313,7 +315,8 @@ fun ChatMessageItem(
                             MarkdownText(
                                 markdown = message.content,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
+                                onHtmlPreviewClick = onHtmlPreviewClick
                             )
                         }
                     }

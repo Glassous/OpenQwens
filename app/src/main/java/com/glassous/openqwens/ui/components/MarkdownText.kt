@@ -49,7 +49,8 @@ fun MarkdownText(
     color: Color = MaterialTheme.colorScheme.onSurface,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
     linkColor: Color = Color.Blue,
-    referenceUrls: Map<Int, String> = emptyMap()
+    referenceUrls: Map<Int, String> = emptyMap(),
+    onHtmlPreviewClick: ((String) -> Unit)? = null
 ) {
     val uriHandler = LocalUriHandler.current
     
@@ -63,7 +64,7 @@ fun MarkdownText(
     val inlineContent = remember { mutableMapOf<String, InlineTextContent>() }
 
     Column(modifier = modifier) {
-        processMarkdownElements(parsedTree, processedMarkdown, color, style, uriHandler, linkColor, referenceUrls, inlineContent)
+        processMarkdownElements(parsedTree, processedMarkdown, color, style, uriHandler, linkColor, referenceUrls, inlineContent, onHtmlPreviewClick)
         
         // 渲染脚注
         MarkdownFootnotes(footnotes, color, style)
@@ -79,7 +80,8 @@ private fun processMarkdownElements(
     uriHandler: androidx.compose.ui.platform.UriHandler,
     linkColor: Color,
     referenceUrls: Map<Int, String>,
-    inlineContent: MutableMap<String, InlineTextContent>
+    inlineContent: MutableMap<String, InlineTextContent>,
+    onHtmlPreviewClick: ((String) -> Unit)?
 ) {
     val citationColor = MaterialTheme.colorScheme.primary
     node.children.forEach { child ->
@@ -127,7 +129,7 @@ private fun processMarkdownElements(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
+                            processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent, onHtmlPreviewClick)
                         }
                     }
                 }
@@ -151,7 +153,7 @@ private fun processMarkdownElements(
                      nodeText.removePrefix("```$language").removeSuffix("```").trim()
                 }
                 
-                CodeBlock(codeText, language, baseStyle, baseColor)
+                CodeBlock(codeText, language, baseStyle, baseColor, onHtmlPreviewClick)
             }
             
             MarkdownElementTypes.UNORDERED_LIST -> {
@@ -167,7 +169,7 @@ private fun processMarkdownElements(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
-                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
+                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent, onHtmlPreviewClick)
                             }
                         }
                     }
@@ -189,7 +191,7 @@ private fun processMarkdownElements(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
-                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
+                                processMarkdownElements(listItem, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent, onHtmlPreviewClick)
                             }
                         }
                         itemNumber++
@@ -227,7 +229,7 @@ private fun processMarkdownElements(
             }
             
             else -> {
-                processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent)
+                processMarkdownElements(child, markdown, baseColor, baseStyle, uriHandler, linkColor, referenceUrls, inlineContent, onHtmlPreviewClick)
             }
         }
     }
@@ -264,7 +266,8 @@ fun CodeBlock(
     codeText: String,
     language: String,
     baseStyle: TextStyle,
-    baseColor: Color
+    baseColor: Color,
+    onHtmlPreviewClick: ((String) -> Unit)? = null
 ) {
     val clipboardManager = LocalClipboardManager.current
     var isCopied by remember { mutableStateOf(false) }
@@ -277,80 +280,92 @@ fun CodeBlock(
         }
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    // Check if we should show the preview card
+    val shouldShowPreview = remember(language) {
+        val lang = language.trim().lowercase()
+        lang == "html" || lang == "xml" || lang == "svg"
+    }
+
+    if (shouldShowPreview && onHtmlPreviewClick != null) {
+        HtmlPreviewCard(
+            onClick = { onHtmlPreviewClick(codeText) },
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-    ) {
-        Column {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = language.ifBlank { "Code" },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                IconButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(codeText))
-                        isCopied = true
-                    },
-                    modifier = Modifier.size(24.dp)
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Column {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
-                        contentDescription = "Copy code",
-                        tint = if (isCopied) Color.Green else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = language.ifBlank { "Code" },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-            }
 
-            // Code
-            SelectionContainer {
-                val highlights = remember(codeText, language, isDarkTheme) {
-                    try {
-                        Highlights.Builder()
-                            .code(codeText)
-                            .theme(if (isDarkTheme) SyntaxThemes.monokai() else SyntaxThemes.notepad())
-                            .language(SyntaxLanguage.getByName(language) ?: SyntaxLanguage.DEFAULT)
-                            .build()
-                    } catch (e: Exception) {
-                        null
+                    IconButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(codeText))
+                            isCopied = true
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isCopied) Icons.Default.Check else Icons.Default.ContentCopy,
+                            contentDescription = "Copy code",
+                            tint = if (isCopied) Color.Green else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
-                
-                if (highlights != null) {
-                    Text(
-                        text = highlights.getCode(),
-                        modifier = Modifier.padding(12.dp),
-                        fontFamily = FontFamily.Monospace,
-                        style = baseStyle.copy(
-                            fontSize = baseStyle.fontSize * 0.9f
-                            // Color is handled by highlights
+
+                // Code
+                SelectionContainer {
+                    val highlights = remember(codeText, language, isDarkTheme) {
+                        try {
+                            Highlights.Builder()
+                                .code(codeText)
+                                .theme(if (isDarkTheme) SyntaxThemes.monokai() else SyntaxThemes.notepad())
+                                .language(SyntaxLanguage.getByName(language) ?: SyntaxLanguage.DEFAULT)
+                                .build()
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    
+                    if (highlights != null) {
+                        Text(
+                            text = highlights.getCode(),
+                            modifier = Modifier.padding(12.dp),
+                            fontFamily = FontFamily.Monospace,
+                            style = baseStyle.copy(
+                                fontSize = baseStyle.fontSize * 0.9f
+                            )
                         )
-                    )
-                } else {
-                     Text(
-                        text = codeText,
-                        modifier = Modifier.padding(12.dp),
-                        fontFamily = FontFamily.Monospace,
-                        style = baseStyle.copy(
-                            fontSize = baseStyle.fontSize * 0.9f,
-                            color = baseColor
+                    } else {
+                         Text(
+                            text = codeText,
+                            modifier = Modifier.padding(12.dp),
+                            fontFamily = FontFamily.Monospace,
+                            style = baseStyle.copy(
+                                fontSize = baseStyle.fontSize * 0.9f,
+                                color = baseColor
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
