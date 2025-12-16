@@ -128,15 +128,86 @@ class DashScopeConfigManager(private val context: Context) {
     private fun loadModels(): List<DashScopeModel> {
         val modelsJson = prefs.getString("models", "[]") ?: "[]"
         val type = object : TypeToken<List<DashScopeModel>>() {}.type
-        return try {
+        try {
             val list: List<DashScopeModel>? = gson.fromJson(modelsJson, type)
             // 确保group字段有值（处理旧数据）
-            list?.map { 
+            var currentModels = list?.map { 
                 if (it.group == null) it.copy(group = ModelGroup.TEXT) else it 
-            } ?: emptyList()
+            }?.toMutableList() ?: mutableListOf()
+
+            // 获取最新的预设模型
+            val defaultModels = getDefaultModels()
+            var hasChanges = false
+            
+            // 检查是否包含核心模型，如果不包含则添加默认模型
+            defaultModels.forEach { defaultModel ->
+                if (currentModels.none { it.id == defaultModel.id }) {
+                    currentModels.add(defaultModel)
+                    hasChanges = true
+                }
+            }
+
+            if (hasChanges) {
+                saveModels(currentModels)
+                return currentModels
+            }
+
+            return currentModels
         } catch (e: Exception) {
-            emptyList()
+            return getDefaultModels().also { saveModels(it) }
         }
+    }
+
+    /**
+     * 重置为默认模型
+     */
+    fun resetToDefaultModels() {
+        val defaultModels = getDefaultModels()
+        saveModels(defaultModels)
+        _models = defaultModels
+    }
+
+    private fun getDefaultModels(): List<DashScopeModel> {
+        return listOf(
+            // 文字模型
+            DashScopeModel("qwen3-max", "qwen3-max", description = "Qwen3 Max", group = ModelGroup.TEXT, note = "输入0.0032元/每千tokens\n输出0.0128元/每千tokens"),
+            DashScopeModel("qwen3-max-preview", "qwen3-max-preview", description = "Qwen3 Max Preview", group = ModelGroup.TEXT, note = "输入0.006元/每千tokens\n输出0.024元/每千tokens"),
+            DashScopeModel("qwen3-235b-a22b-instruct-2507", "qwen3-235b-a22b-instruct-2507", description = "Qwen3 235b A22b Instruct 2507", group = ModelGroup.TEXT, note = "输入0.002元/每千tokens\n输出0.008元/每千tokens"),
+            DashScopeModel("qwen3-235b-a22b-thinking-2507", "qwen3-235b-a22b-thinking-2507", description = "Qwen3 235b A22b Thinking 2507", group = ModelGroup.TEXT, note = "输入（思考）0.002元/每千tokens\n输出（思考）0.02元/每千tokens"),
+            DashScopeModel("qwen3-vl-235b-a22b-instruct", "qwen3-vl-235b-a22b-instruct", description = "Qwen3 Vl 235b A22b Instruct", group = ModelGroup.TEXT, note = "输入 0.002元/每千tokens\n输出0.008元/每千tokens"),
+            DashScopeModel("qwen3-vl-235b-a22b-thinking", "qwen3-vl-235b-a22b-thinking", description = "Qwen3 Vl 235b A22b Thinking", group = ModelGroup.TEXT, note = "输入（思考）0.002元/每千tokens\n输出（思考）0.02元/每千tokens"),
+            DashScopeModel("qwen-plus", "qwen-plus", description = "Qwen Plus", group = ModelGroup.TEXT, note = "输入0.0008元/每tokens\n输出0.002元/每千tokens"),
+            DashScopeModel("qwen-plus-2025-12-01", "qwen-plus-2025-12-01", description = "Qwen Plus 2025 12 01", group = ModelGroup.TEXT, note = "输入0.0008元/每tokens\n输出0.002元/每千tokens"),
+            DashScopeModel("qwen-flash", "qwen-flash", description = "Qwen Flash", group = ModelGroup.TEXT, note = "输入0.00015元/每千tokens\n输出0.0015元/每千tokens"),
+            DashScopeModel("qwen-flash-2025-07-28", "qwen-flash-2025-07-28", description = "Qwen Flash 2025 07 28", group = ModelGroup.TEXT, note = "输入0.00015元/每千tokens\n输出0.0015元/每千tokens"),
+            DashScopeModel("qwen3-coder-plus", "qwen3-coder-plus", description = "Qwen3 Coder Plus", group = ModelGroup.TEXT, note = "输入0.004元/每千tokens\n输出0.016元/每千tokens"),
+            DashScopeModel("qwen3-coder-plus-2025-09-23", "qwen3-coder-plus-2025-09-23", description = "Qwen3 Coder Plus 2025 09 23", group = ModelGroup.TEXT, note = "输入0.004元/每千tokens\n输出0.016元/每千tokens"),
+            DashScopeModel("deepseek-v3.2", "deepseek-v3.2", description = "Deepseek V3.2", group = ModelGroup.TEXT, note = "输入0.002元/每千tokens\n输出0.003元/每千tokens"),
+            DashScopeModel("deepseek-v3.1", "deepseek-v3.1", description = "Deepseek V3.1", group = ModelGroup.TEXT, note = "输入0.004元/每tokens\n输出0.012元/每千tokens"),
+            DashScopeModel("glm-4.6", "glm-4.6", description = "Glm 4.6", group = ModelGroup.TEXT, note = "输入0.003元/每千tokens\n输出0.014元/每千tokens"),
+            DashScopeModel("glm-4.5", "glm-4.5", description = "Glm 4.5", group = ModelGroup.TEXT, note = "输入0.003元/每千tokens\n输出0.014元/每千tokens"),
+            DashScopeModel("glm-4.5-air", "glm-4.5-air", description = "Glm 4.5 Air", group = ModelGroup.TEXT, note = "输入0.0008元/每千tokens\n输出0.006元/每千tokens"),
+            DashScopeModel("kimi-k2-thinking", "kimi-k2-thinking", description = "Kimi K2 Thinking", group = ModelGroup.TEXT, note = "输入0.004元/每千tokens\n输出 0.016元/每千tokens"),
+            DashScopeModel("Moonshot-Kimi-K2-Instruct", "Moonshot-Kimi-K2-Instruct", description = "Moonshot Kimi K2 Instruct", group = ModelGroup.TEXT, note = "输入0.004元/每千tokens\n输出0.016元/每千tokens"),
+
+            // 图片生成模型
+            DashScopeModel("qwen-image-plus", "qwen-image-plus", description = "Qwen Image Plus", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("qwen-image", "qwen-image", description = "Qwen Image", group = ModelGroup.IMAGE, note = "图片生成0.25元/每张"),
+            DashScopeModel("qwen-image-edit-plus", "qwen-image-edit-plus", description = "Qwen Image Edit Plus", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("qwen-image-edit", "qwen-image-edit", description = "Qwen Image Edit", group = ModelGroup.IMAGE, note = "图片生成0.3元/每张"),
+            DashScopeModel("qwen-image-edit-plus-2025-12-15", "qwen-image-edit-plus-2025-12-15", description = "Qwen Image Edit Plus 2025 12 15", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("wan2.6-t2i", "wan2.6-t2i", description = "Wan2.6 T2i", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("wan2.5-t2i-preview", "wan2.5-t2i-preview", description = "Wan2.5 T2i Preview", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("wan2.6-image", "wan2.6-image", description = "Wan2.6 Image", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+            DashScopeModel("wan2.5-i2i-preview", "wan2.5-i2i-preview", description = "Wan2.5 I2i Preview", group = ModelGroup.IMAGE, note = "图片生成0.2元/每张"),
+
+            // 视频生成模型
+            DashScopeModel("wan2.6-i2v", "wan2.6-i2v", description = "Wan2.6 I2v", group = ModelGroup.VIDEO, note = "（720P）0.6元/每秒\n（1080P）1元/每秒"),
+            DashScopeModel("wan2.5-i2v-preview", "wan2.5-i2v-preview", description = "Wan2.5 I2v Preview", group = ModelGroup.VIDEO, note = "（480P）0.3元/每秒\n（720P）0.6元/生成\n（1080P）1元/每秒"),
+            DashScopeModel("wan2.6-r2v", "wan2.6-r2v", description = "Wan2.6 R2v", group = ModelGroup.VIDEO, note = "（720P）0.6元/每秒\n（1080P）1元/每秒"),
+            DashScopeModel("wan2.6-t2v", "wan2.6-t2v", description = "Wan2.6 T2v", group = ModelGroup.VIDEO, note = "（720P）0.6元/每秒\n（1080P）1元/每秒"),
+            DashScopeModel("wan2.5-t2v-preview", "wan2.5-t2v-preview", description = "Wan2.5 T2v Preview", group = ModelGroup.VIDEO, note = "（480P） 0.3元/每秒\n（720P）0.6元/每秒\n（1080P）1元/每秒")
+        )
     }
     
     /**

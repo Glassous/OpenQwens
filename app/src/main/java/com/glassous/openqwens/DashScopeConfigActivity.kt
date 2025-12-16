@@ -79,6 +79,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 
+import androidx.compose.material.icons.filled.Refresh
+
 class DashScopeConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -124,6 +126,7 @@ fun DashScopeConfigScreen(
     onBackClick: () -> Unit
 ) {
     var showTutorialDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -138,6 +141,12 @@ fun DashScopeConfigScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showResetDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "重置预设模型"
+                        )
+                    }
                     IconButton(onClick = { showTutorialDialog = true }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.HelpOutline,
@@ -155,16 +164,41 @@ fun DashScopeConfigScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = paddingValues.calculateTopPadding())
                 .padding(horizontal = 8.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             DashScopeConfigSection(dashScopeConfigManager = dashScopeConfigManager)
+            
+            Spacer(modifier = Modifier.height(paddingValues.calculateBottomPadding()))
         }
         
         if (showTutorialDialog) {
             TutorialDialog(onDismiss = { showTutorialDialog = false })
+        }
+
+        if (showResetDialog) {
+            AlertDialog(
+                onDismissRequest = { showResetDialog = false },
+                title = { Text("重置预设模型") },
+                text = { Text("确认重置所有模型为默认预设吗？这将清除所有自定义修改。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            dashScopeConfigManager.resetToDefaultModels()
+                            showResetDialog = false
+                        }
+                    ) {
+                        Text("确定")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
     }
 }
@@ -656,6 +690,9 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
     var showEditDialog by remember { mutableStateOf(false) }
     var editingModel by remember { mutableStateOf<DashScopeModel?>(null) }
     
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deletingModel by remember { mutableStateOf<DashScopeModel?>(null) }
+    
     val expandedGroups = remember {
         mutableStateMapOf<com.glassous.openqwens.ui.theme.ModelGroup, Boolean>().apply {
             com.glassous.openqwens.ui.theme.ModelGroup.values().forEach { put(it, true) }
@@ -778,13 +815,14 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
                                     groupModels.forEach { model ->
                                         ModelItem(
                                             model = model,
-                                            isSelected = model.id == dashScopeConfigManager.selectedModelId,
-                                            onSelect = { dashScopeConfigManager.setSelectedModel(model.id) },
                                             onEdit = {
                                                 editingModel = model
                                                 showEditDialog = true
                                             },
-                                            onDelete = { dashScopeConfigManager.removeModel(model.id) }
+                                            onDelete = { 
+                                                deletingModel = model
+                                                showDeleteDialog = true
+                                            }
                                         )
                                     }
                                 }
@@ -820,31 +858,53 @@ private fun ModelManagementSection(dashScopeConfigManager: DashScopeConfigManage
             }
         )
     }
+    
+    if (showDeleteDialog && deletingModel != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showDeleteDialog = false
+                deletingModel = null
+            },
+            title = { Text("删除模型") },
+            text = { Text("确认删除模型 \"${deletingModel?.name}\" 吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deletingModel?.let { dashScopeConfigManager.removeModel(it.id) }
+                        showDeleteDialog = false
+                        deletingModel = null
+                    }
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showDeleteDialog = false
+                        deletingModel = null
+                    }
+                ) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ModelItem(
     model: DashScopeModel,
-    isSelected: Boolean,
-    onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = if (isSelected)
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else
-            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 4.dp else 1.dp
-        )
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -852,17 +912,6 @@ private fun ModelItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RadioButton(
-                selected = isSelected,
-                onClick = onSelect,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -870,55 +919,27 @@ private fun ModelItem(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = model.name,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    
-                    Surface(
-                        color = if (isSelected) 
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
-                        else 
-                            MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = model.group.displayName,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
                 }
 
                 if (model.description.isNotEmpty()) {
                     Text(
                         text = model.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 if (model.note.isNotEmpty()) {
                     Text(
-                        text = "备注: ${model.note}",
+                        text = model.note,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -933,10 +954,7 @@ private fun ModelItem(
                     Icon(
                         imageVector = Icons.Filled.Edit,
                         contentDescription = "编辑模型",
-                        tint = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
