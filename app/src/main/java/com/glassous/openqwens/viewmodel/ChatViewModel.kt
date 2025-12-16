@@ -65,7 +65,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         createNewChat()
     }
     
-    private fun loadSavedSessions() {
+    fun loadSavedSessions() {
         val savedSessions = repository.loadSessions()
         _chatSessions.value = savedSessions
     }

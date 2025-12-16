@@ -79,6 +79,16 @@ import android.app.Activity
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.glassous.openqwens.utils.BackupHelper
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,9 +128,38 @@ fun SettingsScreen(
     onBackClick: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val backupHelper = remember { BackupHelper(context) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                backupHelper.exportData(it)
+                    .onSuccess { snackbarHostState.showSnackbar("导出成功") }
+                    .onFailure { e -> snackbarHostState.showSnackbar("导出失败: ${e.message}") }
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                backupHelper.importData(it)
+                    .onSuccess { count -> snackbarHostState.showSnackbar("成功导入/更新 ${count} 条会话") }
+                    .onFailure { e -> snackbarHostState.showSnackbar("导入失败: ${e.message}") }
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             LargeTopAppBar(
                 title = {
@@ -158,7 +197,6 @@ fun SettingsScreen(
             }
             
             // 阿里云百炼模型配置入口
-            val context = LocalContext.current
             ListItem(
                 headlineContent = { Text("阿里云百炼模型配置") },
                 supportingContent = { Text("管理基础URL、API密钥与模型列表") },
@@ -178,6 +216,50 @@ fun SettingsScreen(
                             com.glassous.openqwens.R.anim.slide_out_left
                         )
                     },
+                colors = ListItemDefaults.colors(
+                    containerColor = Color.Transparent
+                )
+            )
+
+            // 数据管理
+            Text(
+                text = "数据管理",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+            )
+            
+            ListItem(
+                headlineContent = { Text("导出数据") },
+                supportingContent = { Text("将聊天记录导出为JSON文件") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.Upload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier.clickable { 
+                    exportLauncher.launch("openqwens_backup_${System.currentTimeMillis()}.json")
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = Color.Transparent
+                )
+            )
+            
+            ListItem(
+                headlineContent = { Text("导入数据") },
+                supportingContent = { Text("从JSON文件恢复聊天记录") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.Download,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier.clickable { 
+                    importLauncher.launch(arrayOf("application/json"))
+                },
                 colors = ListItemDefaults.colors(
                     containerColor = Color.Transparent
                 )
