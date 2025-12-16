@@ -36,7 +36,7 @@ fun AttachmentCard(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
         ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
@@ -125,7 +125,7 @@ fun AttachmentCardReadOnly(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
         ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         // 主要内容 - 水平布局
         Row(

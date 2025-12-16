@@ -52,7 +52,7 @@ fun MixedCardList(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            shadowElevation = 2.dp
+                            shadowElevation = 0.dp
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

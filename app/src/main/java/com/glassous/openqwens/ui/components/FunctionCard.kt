@@ -34,7 +34,7 @@ fun FunctionCard(
             containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
         ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize()
